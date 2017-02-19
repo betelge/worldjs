@@ -6,6 +6,7 @@ var SceneNode = class {
     this.parent = undefined;
 
     this.geometry = undefined;
+    this.material = undefined;
   }
 }
 
@@ -60,17 +61,17 @@ var Manager = class {
 
   updateUniform(program, uniform) {
 
-    if(uniform.location == -2)
-      return;
+    //if(uniform.location == -2)
+    //  return;
 
-    if(uniform.location == -1) {
+    //if(uniform.location == -1) {
       uniform.location = gl.getUniformLocation(program, uniform.name);
 
-      if(uniform.location == -1) {
-        uniform.location = -2;
-        return;
-      }
-    }
+    //  if(uniform.location == -1) {
+    //    uniform.location = -2;
+    //    return;
+    //  }
+    //}
 
     var type = uniform.type;
     var loc = uniform.location;
@@ -135,6 +136,25 @@ var Manager = class {
           break;
       }
     }
+  }
+
+
+  useMaterial(mat) {
+
+    gl.useProgram(mat.program);
+
+    for(var i = 0; i < mat.uniforms.length; i++) {
+      updateUniform(mat.program, mat.uniforms[i]);
+    }
+    
+
+    // TODO: textures
+  }
+
+  draw(drawable) {
+
+    if(!drawable.vertices)
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, drawable.count);
   }
 }
 
