@@ -4,10 +4,12 @@
     <script type="text/javascript" src="gl-matrix/common.js"></script>
     <script type="text/javascript" src="gl-matrix/mat3.js"></script>
     <script type="text/javascript" src="gl-matrix/mat4.js"></script>
+    <script type="text/javascript" src="gl-matrix/vec2.js"></script>
     <script type="text/javascript" src="gl-matrix/vec3.js"></script>
     <script type="text/javascript" src="gl-matrix/vec4.js"></script>
     <script type="text/javascript" src="gl-matrix/quat.js"></script>
 
+    <script type="text/javascript" src="controller.js"></script>
     <script type="text/javascript" src="glutils.js"></script>
     <script type="text/javascript" src="script.js"></script>
     <script type="text/glsl" id="vertex_shader">#version 300 es
@@ -21,7 +23,7 @@
         int nx = gl_VertexID % 2;
         int ny = (gl_VertexID - nx) / 2;
         screenPos = -1. + 2. * vec2(nx, ny);
-        gl_Position = projMat * mvMat * vec4(screenPos, -.5, 1.);
+        gl_Position = projMat * mvMat * vec4(screenPos, 0., 1.);
       }
     </script>
     <script type="text/glsl" id="fragment_shader">#version 300 es

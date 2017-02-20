@@ -3,12 +3,20 @@ var SceneNode = class {
     // geometry, material are allowed to be left undefined
     this.position = vec3.create();
     this.rotation = quat.create();
+    this.scale = vec3.fromValues(1, 1, 1);
     this.children = []; // TODO: implement
     this.parent = undefined;
 
     this.geometry = geometry;
     this.material = material;
     this.mvMatUniform = undefined;
+  }
+}
+
+var Camera = class extends SceneNode {
+  constructor(fov) {
+    super();
+    this.fov = fov;
   }
 }
 
@@ -57,8 +65,14 @@ var Uniform = class {
 }
 
 var Manager = class {
-  constructor(gl) {
+  constructor(gl, cam) {
     this.gl = gl;
+    this.cam = cam;
+
+    
+
+    this.tempRot = quat.create();
+    this.tempPos = vec3.create();
   }
 
   updateUniform(program, uniform) {
@@ -162,8 +176,13 @@ var Manager = class {
     }
 
     if(sceneNode.material) {
-      mat4.fromRotationTranslation(
-          sceneNode.mvMatUniform.array, sceneNode.rotation, sceneNode.position);
+      quat.conjugate(this.tempRot, cam.rotation);
+      vec3.sub(this.tempPos, sceneNode.position, cam.position);
+      vec3.transformQuat(this.tempPos, this.tempPos, this.tempRot);
+      quat.mul(this.tempRot, sceneNode.rotation, this.tempRot);
+
+      mat4.fromRotationTranslationScale(
+          sceneNode.mvMatUniform.array, this.tempRot, this.tempPos, sceneNode.scale);
       this.useMaterial(sceneNode.material);
     }
 
