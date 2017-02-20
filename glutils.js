@@ -1,3 +1,6 @@
+
+// TODO: optimization
+
 var SceneNode = class {
   constructor(geometry, material) {
     // geometry, material are allowed to be left undefined

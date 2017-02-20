@@ -13,7 +13,7 @@ var Controller = function(object, cam, canvas, document) {
   // Controls
   this.STATE = { NONE : -1, PAN : 0, ROTATE : 1, ZOOM : 2, TOUCH_ROTATE : 3, TOUCH_MOVE : 4 };
 
-  var state = this.STATE.NONE;
+  this.state = this.STATE.NONE;
   var panStart = vec2.create();
   var panEnd = vec2.create();
   var rotStart = vec2.create();
@@ -23,9 +23,6 @@ var Controller = function(object, cam, canvas, document) {
   var twistOn = false;
   var zoomStart = vec2.create();
   var zoomEnd = vec2.create();
-  var target = vec3.create();
-  var zoom = 3; // camera distance
-  var rotMatrix = mat4.create();
 
   var self = this;
 
@@ -47,12 +44,12 @@ var Controller = function(object, cam, canvas, document) {
     event.preventDefault();
 
     if (event.button === 0) {
-      state = self.STATE.PAN;
+      self.state = self.STATE.PAN;
       vec2.set(panStart, event.clientX, event.clientY);
       vec2.copy(panEnd, panStart);
     }
     else if (event.button === 2) {
-      state = self.STATE.ROTATE;
+      self.state = self.STATE.ROTATE;
       vec2.set(rotStart, event.clientX, event.clientY);
       vec2.copy(rotEnd, rotStart);
     }
@@ -65,15 +62,15 @@ var Controller = function(object, cam, canvas, document) {
 
   function onMouseMove(event) {
 
-    if(state === self.STATE.NONE)
+    if(self.state === self.STATE.NONE)
       return;
 
     event.preventDefault();
 
-    if (state === self.STATE.PAN) {
+    if (self.state === self.STATE.PAN) {
       vec2.set(panEnd, event.clientX, event.clientY);
     }
-    else if (state === self.STATE.ROTATE) {
+    else if (self.state === self.STATE.ROTATE) {
       vec2.set(rotEnd, event.clientX, event.clientY);
     }
   }
@@ -82,13 +79,7 @@ var Controller = function(object, cam, canvas, document) {
     switch ( event.touches.length ) {
 
     case 1:	// one-fingered touch: rotate
-      state = STATE.TOUCH_ROTATE;
-      vec2.set(rotStart, event.touches[ 0 ].pageX, event.touches[ 0 ].pageY);
-      vec2.copy(rotEnd, rotStart);
-    break;
-
-    case 2:	// two-fingered touch: pan, zoom and twist
-      state = STATE.TOUCH_MOVE;
+      self.state = self.STATE.TOUCH_MOVE;
 
       var dx = event.touches[ 0 ].pageX - event.touches[ 1 ].pageX;
       var dy = event.touches[ 0 ].pageY - event.touches[ 1 ].pageY;
@@ -108,14 +99,14 @@ var Controller = function(object, cam, canvas, document) {
     break;
 
     default:
-      state = STATE.NONE;
+      self.state = self.STATE.NONE;
     }
 
     requestAnimationFrame(update);
   }
 
   function touchEnd(event) {
-    state = STATE.NONE;
+    self.state = self.STATE.NONE;
   }
 
   function touchMove(event) {
@@ -125,13 +116,13 @@ var Controller = function(object, cam, canvas, document) {
     switch ( event.touches.length ) {
 
       case 1:
-        if ( state !== STATE.TOUCH_ROTATE ) { return; }
+        if ( self.state !== self.STATE.TOUCH_ROTATE ) { return; }
 
         vec2.set(rotEnd, event.touches[ 0 ].pageX, event.touches[ 0 ].pageY );
         break;
 
       case 2:
-        if ( state !== STATE.TOUCH_MOVE ) { return; }
+        if ( self.state !== self.STATE.TOUCH_MOVE ) { return; }
 
         var dx = event.touches[ 0 ].pageX - event.touches[ 1 ].pageX;
         var dy = event.touches[ 0 ].pageY - event.touches[ 1 ].pageY;
@@ -149,12 +140,12 @@ var Controller = function(object, cam, canvas, document) {
         break;
 
       default:
-        state = STATE.NONE;
+        self.state = self.STATE.NONE;
     }
   }
 
   this.updateControls = function() {
-    switch( state ) {
+    switch( self.state ) {
 
       case self.STATE.PAN:
         pan(panStart, panEnd);
@@ -218,14 +209,17 @@ var Controller = function(object, cam, canvas, document) {
   }
 
   function zoomCam(delta) {
-    var zoomFactor = .9;
+    var zoomSpeed = .1;
 
-    if ( delta > 0 ) {
-      zoom *= zoomFactor;
-    }
-    else {
-      zoom /= zoomFactor;
-    }
+    var look = vec3.fromValues(0, 0, -1);
+    vec3.transformQuat(look, look, cam.rotation);
+
+    if ( delta < 0 )
+      zoomSpeed *= -1;
+
+    vec3.scale(look, look, zoomSpeed * Math.abs(cam.position[2]));
+
+    vec3.add(cam.position, cam.position, look);
   }
 
   function rotate(dRot) {
@@ -299,7 +293,7 @@ var Controller = function(object, cam, canvas, document) {
   }
 
   function onMouseUp(event) {
-    state = self.STATE.NONE;
+    self.state = self.STATE.NONE;
 
     document.removeEventListener( 'mousemove', onMouseMove, false );
     document.removeEventListener( 'mouseup', onMouseUp, false );

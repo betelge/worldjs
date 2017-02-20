@@ -37,7 +37,7 @@ function start() {
   square.material = material;
   material.uniforms.push(projMatUniform);
 
-  square.scale = vec3.fromValues(100,100,1);
+  //square.scale = vec3.fromValues(100,100,1);
 
   controller = new Controller(cam, cam, canvas, document);
   controller.useAbsoluteZ = true;
@@ -59,7 +59,8 @@ function draw() {
   
   m.draw(square);
 
-  redraw();
+  if(controller.state !== controller.STATE.NONE)
+    redraw();
 }
 
 function onClick(event) {
