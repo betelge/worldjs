@@ -1,12 +1,14 @@
 var SceneNode = class {
-  constructor() {
+  constructor(geometry, material) {
+    // geometry, material are allowed to be left undefined
     this.position = vec3.create();
     this.rotation = quat.create();
     this.children = []; // TODO: implement
     this.parent = undefined;
 
-    this.geometry = undefined;
-    this.material = undefined;
+    this.geometry = geometry;
+    this.material = material;
+    this.mvMatUniform = undefined;
   }
 }
 
@@ -152,10 +154,21 @@ var Manager = class {
     // TODO: textures
   }
 
-  draw(drawable) {
+  draw(sceneNode) {
 
-    if(!drawable.vertices)
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, drawable.count);
+    if(!sceneNode.mvMatUniform && sceneNode.material) {
+      sceneNode.mvMatUniform = new Uniform("mvMat", gl.FLOAT, mat4.create());
+      sceneNode.material.uniforms.push(sceneNode.mvMatUniform);
+    }
+
+    if(sceneNode.material) {
+      mat4.fromRotationTranslation(
+          sceneNode.mvMatUniform.array, sceneNode.rotation, sceneNode.position);
+      this.useMaterial(sceneNode.material);
+    }
+
+    if(!sceneNode.geometry.vertices)
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, sceneNode.geometry.count);
   }
 }
 

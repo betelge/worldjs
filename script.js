@@ -6,11 +6,10 @@ var m; // Manager for geometries, textures, uniforms, etc.
 var projMatUniform;
 
 var square;
-var material;
 
 function start() {
     canvas = document.getElementById('canvas');
-    //canvas.addEventListener("click",fullscreen);
+    canvas.addEventListener("click", onClick);
 
     gl = initWebGL2(canvas);
 
@@ -28,27 +27,38 @@ function start() {
             document.getElementById("fragment_shader"));
 
     square = new SceneNode();
-    square.drawable = new Geometry();
-    square.drawable.count = 4;
+    square.geometry = new Geometry();
+    square.geometry.count = 4;
     material = new Material(program);
     square.material = material;
     material.uniforms = [projMatUniform];
     
-    requestAnimationFrame(draw);
+    redraw();
+}
+
+function redraw() {
+  requestAnimationFrame(draw);
 }
 
 function draw() {
   gl.clearColor(0, 0, 0, 1);
   gl.clearDepth(1);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-  m.useMaterial(square.material);
-  m.draw(square.drawable);
+  
+  m.draw(square);
 
   //srequestAnimationFrame(draw);
 }
 
-function fullscreen(){
+function onClick(event) {
+  var x = 2 * event.clientX/canvas.width - 1;
+  var y = 2 * event.clientY/canvas.height - 1;
+  vec3.set(square.position, -x, y, 0);
+
+  redraw();
+}
+
+function fullscreen() {
     if(canvas.webkitRequestFullScreen) {
         canvas.webkitRequestFullScreen();
     }
@@ -65,5 +75,5 @@ function resize(event) {
 
   mat4.perspective(projMatUniform.array, 60, canvas.width / canvas.height, .05, 100);
 
-  requestAnimationFrame(draw);
+  redraw();
 }

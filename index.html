@@ -12,6 +12,7 @@
     <script type="text/javascript" src="script.js"></script>
     <script type="text/glsl" id="vertex_shader">#version 300 es
 
+      uniform mat4 mvMat;
       uniform mat4 projMat;
 
       out vec2 screenPos;
@@ -20,7 +21,7 @@
         int nx = gl_VertexID % 2;
         int ny = (gl_VertexID - nx) / 2;
         screenPos = -1. + 2. * vec2(nx, ny);
-        gl_Position = projMat * vec4(screenPos, -.5, 1.);
+        gl_Position = projMat * mvMat * vec4(screenPos, -.5, 1.);
       }
     </script>
     <script type="text/glsl" id="fragment_shader">#version 300 es
