@@ -229,6 +229,10 @@ var Controller = function(object, cam, canvas, document) {
       return;
 
     var rotSpeed = 2;
+
+    if(self.isInverted)
+      rotSpeed *= -1;
+
     quat.invert(tempRot, object.rotation);
 
     if(self.useAbsoluteZ) {
