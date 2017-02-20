@@ -75,8 +75,9 @@ var Manager = class {
 
     var type = uniform.type;
     var loc = uniform.location;
+    var values = uniform.values;
 
-    if(values) {
+    if(typeof values !== 'undefined') {
       // Scalar or vector
       switch(type){
         case gl.FLOAT:
@@ -122,7 +123,7 @@ var Manager = class {
       // Matrix
       switch(type) {
         case gl.FLOAT:
-          switch(array.length) {
+          switch(uniform.array.length) {
             case 16:
               gl.uniformMatrix4fv(loc, false, uniform.array);
               break;
@@ -144,7 +145,7 @@ var Manager = class {
     gl.useProgram(mat.program);
 
     for(var i = 0; i < mat.uniforms.length; i++) {
-      updateUniform(mat.program, mat.uniforms[i]);
+      this.updateUniform(mat.program, mat.uniforms[i]);
     }
     
 

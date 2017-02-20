@@ -3,7 +3,7 @@ var gl;
 var program;
 var m; // Manager for geometries, textures, uniforms, etc.
 
-var projMatrix = mat4.create();
+var projMatUniform;
 
 var square;
 var material;
@@ -20,6 +20,7 @@ function start() {
 
     m = new Manager(gl);
 
+    projMatUniform = new Uniform("projMat", gl.FLOAT, mat4.create());
     window.addEventListener('resize', resize);
     resize();
 
@@ -31,6 +32,7 @@ function start() {
     square.drawable.count = 4;
     material = new Material(program);
     square.material = material;
+    material.uniforms = [projMatUniform];
     
     requestAnimationFrame(draw);
 }
@@ -61,7 +63,7 @@ function resize(event) {
   
   gl.viewport(0, 0, canvas.width, canvas.height);
 
-  mat4.perspective(projMatrix, 60, canvas.width / canvas.height, .05, 100);
+  mat4.perspective(projMatUniform.array, 60, canvas.width / canvas.height, .05, 100);
 
   requestAnimationFrame(draw);
 }
