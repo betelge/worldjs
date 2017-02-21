@@ -6,6 +6,9 @@ var m; // Manager for geometries, textures, uniforms, etc.
 var projMatUniform;
 var cam;
 
+var RES = 32;
+var resUniform;
+
 var square;
 
 var controller;
@@ -20,7 +23,10 @@ function start() {
   }
 
   cam = new Camera(40/180*3.141);
-  cam.position[2] = 10;
+  cam.position = vec3.fromValues(0, 10, 5)
+  var tempMat = mat4.create();
+  mat4.lookAt(tempMat, cam.position, vec3.fromValues(0,0,0), vec3.fromValues(0,0,1));
+  mat4.getRotation(cam.rotation, tempMat);
   m = new Manager(gl, cam);
 
   projMatUniform = new Uniform("projMat", gl.FLOAT, mat4.create());
@@ -32,7 +38,7 @@ function start() {
 
   square = new SceneNode();
   square.geometry = new Geometry();
-  square.geometry.count = 4;
+  square.geometry.count = 2*RES * (RES-1) + (RES-2)*2;
   material = new Material(program);
   square.material = material;
   material.uniforms.push(projMatUniform);
@@ -41,6 +47,9 @@ function start() {
 
   controller = new Controller(cam, cam, canvas, document);
   controller.useAbsoluteZ = true;
+
+  resUniform = new Uniform("res", gl.INT, RES);
+  material.uniforms.push(resUniform);
 
   redraw();
 }
@@ -53,7 +62,8 @@ function draw() {
 
   controller.updateControls();
   
-  gl.clearColor(0, 0, 0, 1);
+  gl.clearColor(.1, .1, .3, 1);
+  gl.enable(gl.DEPTH_TEST);
   gl.clearDepth(1);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   

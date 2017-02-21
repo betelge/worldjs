@@ -16,24 +16,48 @@
 
       uniform mat4 mvMat;
       uniform mat4 projMat;
+      uniform mat4 normMat;
 
-      out vec2 screenPos;
+      uniform int res;
+
+      out vec3 modelPos;
+      out vec3 normal;
 
       void main() {
-        int nx = gl_VertexID % 2;
-        int ny = (gl_VertexID - nx) / 2;
-        screenPos = -1. + 2. * vec2(nx, ny);
-        gl_Position = projMat * mvMat * vec4(screenPos, 0., 1.);
+        int stride = 2 * res + 2;
+        int col = gl_VertexID % stride;
+        int row = (gl_VertexID - col) / stride;
+        int odd = col % 2;
+        col /= 2;
+        int extra = int(col > res - 1);
+        int e1 = (1-odd)*extra;
+        int e2 = odd*extra;
+        int nx = col - e1 - res*e2;
+        int ny = row + odd + e1;
+        
+        vec2 coords = -1. + 2. * vec2(nx, ny) / float(res - 1);
+
+        float z = .3*sin(4.*coords.x) + .3*sin(4.*coords.y);
+
+        vec4 norm4 = normMat * vec4(.3*4.*cos(4.*coords.x), .3*4.*cos(4.*coords.y), 1., 1.);
+        normal = norm4.xyz / norm4.w;
+
+        modelPos = vec3(coords, z);
+        gl_Position = projMat * mvMat * vec4(modelPos, 1.);
       }
     </script>
     <script type="text/glsl" id="fragment_shader">#version 300 es
       precision mediump float;
 
-      in vec2 screenPos;
+      in vec3 modelPos;
+      in vec3 normal;
       out vec4 color;
 
       void main() {
-        color = vec4(abs(screenPos), 0., 1.);
+        vec3 n = normalize(normal);
+        vec3 lightDir = vec3(0, 0, 1);
+        float diffuse = 0.3 + .7* max(0.0, dot(n, lightDir));
+        color = vec4(diffuse * abs(modelPos.xy), 0., 1.);
       }
     </script>
   </head>

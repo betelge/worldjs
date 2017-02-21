@@ -13,6 +13,7 @@ var SceneNode = class {
     this.geometry = geometry;
     this.material = material;
     this.mvMatUniform = undefined;
+    this.normMatUniform = undefined;
   }
 }
 
@@ -58,6 +59,9 @@ var Uniform = class {
     this.name = name;
     this.type = type;
 
+    if(values && !values.length)
+      values = [values]; // Allows for scalars
+
     if(values.length <= 4)
         this.values = values;
     else
@@ -76,6 +80,7 @@ var Manager = class {
 
     this.tempRot = quat.create();
     this.tempPos = vec3.create();
+    this.zeroPos = vec3.fromValues(0, 0, 0);
   }
 
   updateUniform(program, uniform) {
@@ -103,36 +108,48 @@ var Manager = class {
           switch(values.length) {
             case 1:
               gl.uniform1f(loc, values[0]);
+              break;
             case 2:
               gl.uniform2f(loc, values[0], values[1]);
+              break;
             case 3:
               gl.uniform3f(loc, values[0], values[1], values[2]);
+              break;
             case 4:
               gl.uniform4f(loc, values[0], values[1], values[2], values[3]);
+              break;
           }
           break;
         case gl.INT:
           switch(values.length) {
             case 1:
               gl.uniform1i(loc, values[0]);
+              break;
             case 2:
               gl.uniform2i(loc, values[0], values[1]);
+              break;
             case 3:
               gl.uniform3i(loc, values[0], values[1], values[2]);
+              break;
             case 4:
               gl.uniform4i(loc, values[0], values[1], values[2], values[3]);
+              break;
           }
           break;
         case gl.UINT:
           switch(values.length) {
             case 1:
               gl.uniform1ui(loc, values[0]);
+              break;
             case 2:
               gl.uniform2ui(loc, values[0], values[1]);
+              break;
             case 3:
               gl.uniform3ui(loc, values[0], values[1], values[2]);
+              break;
             case 4:
               gl.uniform4ui(loc, values[0], values[1], values[2], values[3]);
+              break;
           }
           break;
 
@@ -176,6 +193,9 @@ var Manager = class {
     if(!sceneNode.mvMatUniform && sceneNode.material) {
       sceneNode.mvMatUniform = new Uniform("mvMat", gl.FLOAT, mat4.create());
       sceneNode.material.uniforms.push(sceneNode.mvMatUniform);
+
+      sceneNode.normMatUniform = new Uniform("normMat", gl.FLOAT, mat4.create());
+      sceneNode.material.uniforms.push(sceneNode.normMatUniform);
     }
 
     if(sceneNode.material) {
@@ -186,6 +206,9 @@ var Manager = class {
 
       mat4.fromRotationTranslationScale(
           sceneNode.mvMatUniform.array, this.tempRot, this.tempPos, sceneNode.scale);
+
+      mat4.fromRotationTranslationScale(
+          sceneNode.normMatUniform.array, sceneNode.rotation, this.zeroPos, sceneNode.scale)
       this.useMaterial(sceneNode.material);
     }
 
@@ -258,6 +281,9 @@ function loadShader(vertexScript, fragmentScript, message) {
         + "\n\n"
         + "Shader program info log:\n"
         + gl.getProgramInfoLog(program);
+
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS))
+      console.log(message);
 
     return program;
 }
