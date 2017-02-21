@@ -19,6 +19,7 @@
       uniform mat4 normMat;
 
       uniform int res;
+      uniform vec3 patchPos;
 
       out vec3 modelPos;
       out vec3 normal;
@@ -37,11 +38,13 @@
         
         vec2 coords = -.5 + vec2(nx, ny) / float(res - 1);
 
-        float frec = 2. * 3.1412;
-        float z = .15*sin(frec*coords.x) + .15*sin(frec*coords.y);
+        vec2 world = coords + patchPos.xy;
 
-        vec4 norm4 = normMat * vec4(.15*frec*cos(frec*coords.x),
-            .15*frec*cos(frec*coords.y), 1., 1.);
+        float frec = 2.5 * 3.1412;
+        float z = .15*sin(frec*world.x) + .15*sin(frec*world.y);
+
+        vec4 norm4 = normMat * vec4(.15*frec*cos(frec*world.x),
+            .15*frec*cos(frec*world.y), 1., 1.);
         normal = norm4.xyz / norm4.w;
 
         modelPos = vec3(coords, z);

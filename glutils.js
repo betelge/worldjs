@@ -12,6 +12,8 @@ var SceneNode = class {
 
     this.geometry = geometry;
     this.material = material;
+
+    this.uniforms = []; // These override any material uniforms with the same name
   }
 }
 
@@ -209,7 +211,12 @@ var Manager = class {
 
       mat4.fromRotationTranslationScale(
           sceneNode.material.normMatUniform.array, sceneNode.rotation, this.zeroPos, sceneNode.scale)
+      
       this.useMaterial(sceneNode.material);
+
+      for(var i = 0; i < sceneNode.uniforms.length; i++) {
+        this.updateUniform(sceneNode.material.program, sceneNode.uniforms[i]);
+    }
     }
 
     if(!sceneNode.geometry.vertices)

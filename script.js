@@ -61,6 +61,8 @@ function createPatch(material, x, y) {
   patch.position[0] += x;
   patch.position[1] += y;
 
+  patch.uniforms.push(new Uniform("patchPos", gl.FLOAT, [x, y, 0]));
+
   return patch;
 }
 
