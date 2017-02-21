@@ -9,7 +9,7 @@ var cam;
 var RES = 32;
 var resUniform;
 
-var square;
+var squares = [];
 
 var controller;
 
@@ -23,7 +23,7 @@ function start() {
   }
 
   cam = new Camera(40/180*3.141);
-  cam.position = vec3.fromValues(0, 10, 5)
+  cam.position = vec3.fromValues(0, 5, 2.5)
   var tempMat = mat4.create();
   mat4.lookAt(tempMat, cam.position, vec3.fromValues(0,0,0), vec3.fromValues(0,0,1));
   mat4.getRotation(cam.rotation, tempMat);
@@ -36,14 +36,12 @@ function start() {
   program = loadShader(document.getElementById("vertex_shader"),
         document.getElementById("fragment_shader"));
 
-  square = new SceneNode();
-  square.geometry = new Geometry();
-  square.geometry.count = 2*RES * (RES-1) + (RES-2)*2;
   material = new Material(program);
-  square.material = material;
   material.uniforms.push(projMatUniform);
 
-  //square.scale = vec3.fromValues(100,100,1);
+  for(var i = -2; i <= 2; i++)
+    for(var j = -2; j <= 2; j++)
+      squares.push(createPatch(material, i, j));
 
   controller = new Controller(cam, cam, canvas, document);
   controller.useAbsoluteZ = true;
@@ -52,6 +50,18 @@ function start() {
   material.uniforms.push(resUniform);
 
   redraw();
+}
+
+function createPatch(material, x, y) {
+  var patch = new SceneNode();
+  patch.geometry = new Geometry();
+  patch.geometry.count = 2*RES * (RES-1) + (RES-2)*2;
+  patch.material = material;
+
+  patch.position[0] += x;
+  patch.position[1] += y;
+
+  return patch;
 }
 
 function redraw() {
@@ -67,7 +77,8 @@ function draw() {
   gl.clearDepth(1);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   
-  m.draw(square);
+  for(var i = 0; i < squares.length; i++)
+    m.draw(squares[i]);
 
   if(controller.state !== controller.STATE.NONE)
     redraw();

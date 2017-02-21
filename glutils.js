@@ -12,8 +12,6 @@ var SceneNode = class {
 
     this.geometry = geometry;
     this.material = material;
-    this.mvMatUniform = undefined;
-    this.normMatUniform = undefined;
   }
 }
 
@@ -41,6 +39,10 @@ var Material = class {
     this.program = program;
     this.textures = [];
     this.uniforms = [];
+
+    // Special tags
+    this.mvMatUniform = undefined;
+    this.normMatUniform = undefined;
   }
 }
 
@@ -68,6 +70,7 @@ var Uniform = class {
         this.array = new Float32Array(values);
 
     this.location = -1; // Changes for different programs
+    this.program = -1; // Last program used
   }
 }
 
@@ -85,17 +88,14 @@ var Manager = class {
 
   updateUniform(program, uniform) {
 
-    //if(uniform.location == -2)
-    //  return;
-
-    //if(uniform.location == -1) {
+    if(uniform.program !== program) {
       uniform.location = gl.getUniformLocation(program, uniform.name);
+      uniform.program = program;
+    }
 
-    //  if(uniform.location == -1) {
-    //    uniform.location = -2;
-    //    return;
-    //  }
-    //}
+    if(uniform.location == -1)
+      return;
+
 
     var type = uniform.type;
     var loc = uniform.location;
@@ -190,12 +190,12 @@ var Manager = class {
 
   draw(sceneNode) {
 
-    if(!sceneNode.mvMatUniform && sceneNode.material) {
-      sceneNode.mvMatUniform = new Uniform("mvMat", gl.FLOAT, mat4.create());
-      sceneNode.material.uniforms.push(sceneNode.mvMatUniform);
+    if(!sceneNode.material.mvMatUniform && sceneNode.material) {
+      sceneNode.material.mvMatUniform = new Uniform("mvMat", gl.FLOAT, mat4.create());
+      sceneNode.material.uniforms.push(sceneNode.material.mvMatUniform);
 
-      sceneNode.normMatUniform = new Uniform("normMat", gl.FLOAT, mat4.create());
-      sceneNode.material.uniforms.push(sceneNode.normMatUniform);
+      sceneNode.material.normMatUniform = new Uniform("normMat", gl.FLOAT, mat4.create());
+      sceneNode.material.uniforms.push(sceneNode.material.normMatUniform);
     }
 
     if(sceneNode.material) {
@@ -205,10 +205,10 @@ var Manager = class {
       quat.mul(this.tempRot, sceneNode.rotation, this.tempRot);
 
       mat4.fromRotationTranslationScale(
-          sceneNode.mvMatUniform.array, this.tempRot, this.tempPos, sceneNode.scale);
+          sceneNode.material.mvMatUniform.array, this.tempRot, this.tempPos, sceneNode.scale);
 
       mat4.fromRotationTranslationScale(
-          sceneNode.normMatUniform.array, sceneNode.rotation, this.zeroPos, sceneNode.scale)
+          sceneNode.material.normMatUniform.array, sceneNode.rotation, this.zeroPos, sceneNode.scale)
       this.useMaterial(sceneNode.material);
     }
 

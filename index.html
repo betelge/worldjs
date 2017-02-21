@@ -35,11 +35,13 @@
         int nx = col - e1 - res*e2;
         int ny = row + odd + e1;
         
-        vec2 coords = -1. + 2. * vec2(nx, ny) / float(res - 1);
+        vec2 coords = -.5 + vec2(nx, ny) / float(res - 1);
 
-        float z = .3*sin(4.*coords.x) + .3*sin(4.*coords.y);
+        float frec = 2. * 3.1412;
+        float z = .15*sin(frec*coords.x) + .15*sin(frec*coords.y);
 
-        vec4 norm4 = normMat * vec4(.3*4.*cos(4.*coords.x), .3*4.*cos(4.*coords.y), 1., 1.);
+        vec4 norm4 = normMat * vec4(.15*frec*cos(frec*coords.x),
+            .15*frec*cos(frec*coords.y), 1., 1.);
         normal = norm4.xyz / norm4.w;
 
         modelPos = vec3(coords, z);
@@ -57,7 +59,7 @@
         vec3 n = normalize(normal);
         vec3 lightDir = vec3(0, 0, 1);
         float diffuse = 0.3 + .7* max(0.0, dot(n, lightDir));
-        color = vec4(diffuse * abs(modelPos.xy), 0., 1.);
+        color = vec4(diffuse * abs(2.*modelPos.xy), 0., 1.);
       }
     </script>
   </head>
