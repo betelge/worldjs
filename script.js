@@ -103,11 +103,18 @@ function recurseQuad(quad, pos, rot) {
     }
   
   var isInside = false;
-  for(var i = 0; i < 4; i++)
+  for(var i = 0; i < 4; i++) {
     isInside = isInside
-      ||(Math.abs(tempVecs[i][0]) < 1
-      && Math.abs(tempVecs[i][1]) < 1
-      && Math.abs(tempVecs[i][2]) < 1);
+      ||(Math.abs(tempVecs[i][0]) <= 1
+      && Math.abs(tempVecs[i][1]) <= 1
+      && Math.abs(tempVecs[i][2]) <= 1);
+
+      // Perspective correctin for sign when z > 1
+      if(tempVecs[i][2] > 1) {
+        tempVecs[i][0] *= -1;
+        tempVecs[i][1] *= -1;
+      }
+  }
   if(!isInside) { // If no points inide frustum, check for intersections
     var isCrossing = true;
     for(var i = 0; i < 2; i++) {
