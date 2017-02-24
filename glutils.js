@@ -87,7 +87,7 @@ var Manager = class {
     this.gl = gl;
     this.cam = cam;
 
-    
+    this.isLineMode = false;
 
     this.tempRot = quat.create();
     this.tempPos = vec3.create();
@@ -225,8 +225,12 @@ var Manager = class {
     }
     }
 
+    var mode = gl.TRIANGLE_STRIP;
+    if(this.isLineMode)
+      mode = gl.LINE_STRIP;
+
     if(!sceneNode.geometry.vertices)
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, sceneNode.geometry.count);
+      gl.drawArrays(mode, 0, sceneNode.geometry.count);
   }
 }
 

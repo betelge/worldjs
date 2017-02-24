@@ -6,8 +6,9 @@ var m; // Manager for geometries, textures, uniforms, etc.
 var projMatUniform;
 var cam;
 
-var RES = 32;
+var RES = 128;
 var resUniform;
+var isLODFrozen = false;
 
 var patches = [];
 
@@ -17,7 +18,7 @@ var Quad = class {
   constructor(x, y, scale)  {
     this.x = x; // [0, 1] position within the root quad
     this.y = y;
-    this.scale = scale; // root quad has scale 1
+    this.scale = scale;
 
     this.isLeaf = true;
     this.children = [];
@@ -25,7 +26,7 @@ var Quad = class {
   }
 }
 
-var root = new Quad(0, 0, 1);
+var root = new Quad(0, 0, 100);
 
 function start() {
   canvas = document.getElementById('canvas');
@@ -64,6 +65,8 @@ function start() {
   material.uniforms.push(resUniform);
 
   redraw();
+
+  addEventListener("keydown", keyDown);
 }
 
 function arrangePatches(pos, rot) {
@@ -72,7 +75,7 @@ function arrangePatches(pos, rot) {
   recurseQuad(root, pos, rot);
 }
 
-var lodSplit = .5;
+var lodSplit = 1;
 var lodMerge = lodSplit * 1.1;
 
 function recurseQuad(quad, pos, rot) {
@@ -132,6 +135,7 @@ function createPatch(material, x, y, scale) {
   patch.setScale(scale);
 
   patch.uniforms.push(new Uniform("patchPos", gl.FLOAT, [x, y, 0]));
+  patch.uniforms.push(new Uniform("scale", gl.FLOAT, scale));
 
   return patch;
 }
@@ -144,7 +148,8 @@ function draw() {
 
   controller.updateControls();
 
-  arrangePatches(cam.position, cam.rotation);
+  if(!isLODFrozen)
+    arrangePatches(cam.position, cam.rotation);
   
   gl.clearColor(.1, .1, .3, 1);
   gl.enable(gl.DEPTH_TEST);
@@ -181,7 +186,22 @@ function resize(event) {
   
   gl.viewport(0, 0, canvas.width, canvas.height);
 
-  mat4.perspective(projMatUniform.array, cam.fov, canvas.width / canvas.height, .05, 100);
+  mat4.perspective(projMatUniform.array, cam.fov, canvas.width / canvas.height, .05, 1000);
 
   redraw();
+}
+
+function keyDown(event) {
+  switch(event.code) {
+    case "KeyT":
+      isLODFrozen = !isLODFrozen;
+      if(!isLODFrozen)
+        redraw();
+      break;
+    case "KeyL":
+      m.isLineMode = !m.isLineMode;
+      redraw();
+      break;
+    default:
+  }
 }

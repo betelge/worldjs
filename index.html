@@ -20,6 +20,7 @@
 
       uniform int res;
       uniform vec3 patchPos;
+      uniform float scale;
 
       out vec3 modelPos;
       out vec3 normal;
@@ -38,10 +39,12 @@
         
         vec2 coords = -.5 + vec2(nx, ny) / float(res - 1);
 
-        vec2 world = coords + patchPos.xy;
+        vec2 world = scale * coords + patchPos.xy;
 
         float frec = 2.5 * 3.1412;
         float z = .15*sin(frec*world.x) + .15*sin(frec*world.y);
+
+        z /= scale;
 
         vec4 norm4 = normMat * vec4(.15*frec*cos(frec*world.x),
             .15*frec*cos(frec*world.y), 1., 1.);
