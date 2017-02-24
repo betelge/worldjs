@@ -99,7 +99,7 @@ function recurseQuad(quad, pos, rot) {
       tempVecs[2*i+j][1] = quad.y + (j - .5) * quad.scale;
       tempVecs[2*i+j][2] = 0;
 
-      vec3.transformMat4(tempVecs[i+2*j], tempVecs[i+2*j], frustumMat);
+      vec3.transformMat4(tempVecs[2*i+j], tempVecs[2*i+j], frustumMat);
     }
   
   var isInside = false;
