@@ -115,18 +115,60 @@ function recurseQuad(quad, pos, rot) {
         tempVecs[i][1] *= -1;
       }
   }
-  if(!isInside) { // If no points inide frustum, check for intersections
-    var isCrossing = true;
+  /*if(!isInside) { // If no points inide frustum, check for intersections
+    var isCrossing = false;
     for(var i = 0; i < 2; i++) {
       var is = false;
       is = is || tempVecs[0][i] * tempVecs[1][i] < 0;
       is = is || tempVecs[2][i] * tempVecs[3][i] < 0;
       is = is || tempVecs[1][i] * tempVecs[3][i] < 0;
       is = is || tempVecs[0][i] * tempVecs[2][i] < 0;
-      isCrossing = isCrossing && is;
+
+      if(is) {
+        for(var j = 0; j < 4; j++) {
+          if(Math.abs(tempVecs[j][1-i]) <= 1) {
+            isCrossing = true;
+            break;
+          }
+        }
+      }
     }
 
     isInside = isInside || isCrossing;
+  }*/
+  if(!isInside) {
+    var outside = true;
+    isInside = true;
+    for(var i = 0; i < 4; i++) {
+      outside = outside && tempVecs[i][0] < -1;
+    }
+    if(outside) isInside = false;
+
+    outside = true;
+    for(var i = 0; i < 4; i++) {
+      outside = outside && tempVecs[i][0] > 1;
+    }
+    if(outside) isInside = false;
+
+    outside = true;
+    for(var i = 0; i < 4; i++) {
+      outside = outside && tempVecs[i][1] < -1;
+    }
+    if(outside) isInside = false;
+
+    outside = true;
+    for(var i = 0; i < 4; i++) {
+      outside = outside && tempVecs[i][1] > 1;
+    }
+    if(outside) isInside = false;
+
+    outside = true;
+    for(var i = 0; i < 4; i++) {
+      outside = outside && tempVecs[i][2] > 1;
+    }
+    if(outside) isInside = false;
+
+    // We don't check the z < -1 case (further than far plane)'
   }
   if(!isInside) return;
 
