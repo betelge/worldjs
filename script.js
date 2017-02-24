@@ -11,6 +11,7 @@ var resUniform;
 var isLODFrozen = false;
 
 var patches = [];
+var patchPool = [];
 
 var controller;
 
@@ -37,6 +38,8 @@ function start() {
 
   }
 
+  var ext = gl.getExtension("EXT_color_buffer_float");
+
   cam = new Camera(40/180*3.141);
   cam.position = vec3.fromValues(0, 5, 2.5)
   var tempMat = mat4.create();
@@ -53,10 +56,6 @@ function start() {
 
   material = new Material(program);
   material.uniforms.push(projMatUniform);
-
-  /*for(var i = -2; i <= 2; i++)
-    for(var j = -2; j <= 2; j++)
-      patches.push(createPatch(material, i, j));*/
 
   controller = new Controller(cam, cam, canvas, document);
   controller.useAbsoluteZ = true;
@@ -202,14 +201,16 @@ function recurseQuad(quad, pos, rot) {
     if(dx*dx + dy*dy + dz*dz > quad.scale*quad.scale * lodMerge*lodMerge) {
       // Merge
       quad.isLeaf = true;
+      for(var i = 0; i < quad.children.length; i++)
+        if(quad.children[i].sceneNode)
+          patchPool.push(quad.children[i].sceneNode);
       quad.children = [];
     }
   }
 
   if(quad.isLeaf) {
-    if(!quad.sceneNode) {
+    if(!quad.sceneNode)
       quad.sceneNode = createPatch(material, quad.x, quad.y, quad.scale);
-    }
     patches.push(quad.sceneNode);
   }
   else {
@@ -219,14 +220,76 @@ function recurseQuad(quad, pos, rot) {
   }
 }
 
+
+var rttFbo = -1;
+var rttProgram = -1;
+var rttResLocation = -1;
+var rttPatchPosLocation = -1;
+var rttScaleLocation = -1;
+
+function doProc(texture, x, y, scale) {
+  
+  if(texture.glname === -1)
+    m.initTexture(texture);
+
+  if(rttFbo === -1)
+    rttFbo = gl.createFramebuffer();
+
+  if(rttProgram === -1) {
+    rttProgram = loadShader(document.getElementById("rtt_vertex_shader"),
+        document.getElementById("rtt_fragment_shader"));
+
+    rttResLocation = gl.getUniformLocation(rttProgram, "res");
+    rttPatchPosLocation = gl.getUniformLocation(rttProgram, "patchPos");
+    rttScaleLocation = gl.getUniformLocation(rttProgram, "scale");
+  }
+
+  gl.useProgram(rttProgram);
+
+
+  gl.uniform1i(rttResLocation, RES);
+  gl.uniform3f(rttPatchPosLocation, x, y, 0);
+  gl.uniform1f(rttScaleLocation, scale);
+
+  gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, rttFbo);
+
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D,
+    texture.glname, 0);
+
+  var fboStatus = gl.checkFramebufferStatus(gl.DRAW_FRAMEBUFFER);
+
+  gl.viewport(0, 0, RES, RES);
+  
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+  gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, null);
+  gl.viewport(0, 0, canvas.width, canvas.height);
+}
+
+
+
 function createPatch(material, x, y, scale) {
-  var patch = new SceneNode();
-  patch.geometry = new Geometry();
+  var patch;
+  if(patchPool.length === 0) {
+    patch = new SceneNode();
+    patch.geometry = new Geometry();
+
+    patch.heightTexture = new Texture2d("heightTexture", gl.RGBA32F, gl.RGBA, RES, RES, gl.FLOAT, null);
+    patch.textures.push(patch.heightTexture);
+  }
+  else {
+     patch = patchPool.pop();
+  }
+
+
+  // Fill texture
+  doProc(patch.heightTexture, x, y, scale);
+
   patch.geometry.count = 2*RES * (RES-1) + (RES-2)*2;
   patch.material = material;
 
-  patch.position[0] += x;
-  patch.position[1] += y;
+  patch.position[0] = x;
+  patch.position[1] = y;
   patch.setScale(scale);
 
   patch.uniforms.push(new Uniform("patchPos", gl.FLOAT, [x, y, 0]));

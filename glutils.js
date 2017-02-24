@@ -14,6 +14,7 @@ var SceneNode = class {
     this.material = material;
 
     this.uniforms = []; // These override any material uniforms with the same name
+    this.textures = [];
 
     this.setScale = function(scalar) {
       this.scale[0] = scalar;
@@ -55,12 +56,19 @@ var Material = class {
 }
 
 var Texture2d = class {
-  constructor(internalFormat, format, width, height, type, data) {
+  constructor(name, internalFormat, format, width, height, type, data) {
     this.internalFormat = internalFormat;
     this.format = format;
     this.width = width;
     this.height = height;
+    this.type = type;
     this.data = data;
+
+    this.name = name;
+
+    this.glname = -1;
+    this.location = -1; // Uniform location
+    this.program = -1;
   }
 }
 
@@ -182,7 +190,40 @@ var Manager = class {
       }
     }
   }
+  
+  bindTexture(program, texture, unit) {
+    if(texture.program !== program) {
+      texture.location = gl.getUniformLocation(program, texture.name);
+      texture.program = program;
+    }
 
+    if(texture.location == -1)
+      return;
+
+    if(texture.glname == -1)
+      this.initTexture(texture);
+      
+    gl.activeTexture(gl.TEXTURE0 + unit);
+    gl.bindTexture(gl.TEXTURE_2D, texture.glname);
+
+    gl.uniform1i(texture.location, unit);
+
+  }
+
+  initTexture(texture) {
+    gl.activeTexture(gl.TEXTURE0);
+    texture.glname = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, texture.glname);
+
+    gl.texParameterf(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST); // NEAREST for float
+    gl.texParameterf(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameterf(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameterf(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+    if(!texture.data) { // Uninitialized
+      gl.texImage2D(gl.TEXTURE_2D, 0, texture.internalFormat, texture.width, texture.height, 0, texture.format, texture.type, texture.data);
+    }
+  }
 
   useMaterial(mat) {
 
@@ -193,7 +234,9 @@ var Manager = class {
     }
     
 
-    // TODO: textures
+    for(var i = 0; i < mat.textures.length; i++) {
+      this.bindTexture(mat.program, mat.textures[i], i); // Ignored if overridden in SceneNode'
+    }
   }
 
   draw(sceneNode) {
@@ -222,7 +265,11 @@ var Manager = class {
 
       for(var i = 0; i < sceneNode.uniforms.length; i++) {
         this.updateUniform(sceneNode.material.program, sceneNode.uniforms[i]);
-    }
+      }
+
+      for(var i = 0; i < sceneNode.textures.length; i++) {
+        this.bindTexture(sceneNode.material.program, sceneNode.textures[i], i);
+      }
     }
 
     var mode = gl.TRIANGLE_STRIP;

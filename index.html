@@ -18,13 +18,16 @@
       uniform mat4 projMat;
       uniform mat4 normMat;
 
+      uniform sampler2D heightTexture; // (height, normX, normY) RGB32F
+
       uniform int res;
       uniform vec3 patchPos;
       uniform float scale;
 
       out vec3 modelPos;
       out vec3 normal;
-      out float debug;
+      out float debugScale;
+      out vec4 debug;
 
       void main() {
         int stride = 2 * res + 2;
@@ -38,18 +41,19 @@
         int nx = col - e1 - res*e2;
         int ny = row + odd + e1;
         
-        vec2 coords = -.5 + vec2(nx, ny) / float(res - 1);
+        vec2 texCoords = vec2(nx, ny) / float(res - 1);
+        vec2 coords = -.5 + texCoords;
 
         vec2 world = scale * coords + patchPos.xy;
 
-        float frec = 2.5 * 3.1412;
-        float z = .15*sin(frec*world.x) + .15*sin(frec*world.y);
-
+        vec3 heightNormal = texture(heightTexture, texCoords).xyz;
+        debug = vec4(1000.*heightNormal, 1.);
+        float z = heightNormal.x;
         z /= scale;
-        debug = scale;
+        debugScale = scale;
 
-        vec4 norm4 = normMat * vec4(.15*frec*cos(frec*world.x),
-            .15*frec*cos(frec*world.y), 1., 1.);
+        vec4 norm4 = vec4(normalize(vec3(heightNormal.yz, 1.)), 1.);
+        norm4 = normMat * norm4;
         normal = norm4.xyz / norm4.w;
 
         modelPos = vec3(coords, z);
@@ -61,7 +65,8 @@
 
       in vec3 modelPos;
       in vec3 normal;
-      in float debug;
+      in float debugScale;
+      in vec4 debug;
 
       out vec4 color;
 
@@ -70,12 +75,45 @@
         vec3 lightDir = vec3(0, 0, 1);
         float diffuse = 0.3 + .7* max(0.0, dot(n, lightDir));
 
-        float r = abs(1. - debug);
-        float g = fract(debug);
-        float b = fract((r - g) * 100.) + fract(0.1 * debug) + fract(0.01 * debug);
-        vec3 col = clamp(vec3(r, g, b), 0., 1.);
-        
-        color = vec4(diffuse * col, 1.);
+        float r = abs(1. - debugScale);
+        float g = fract(debugScale);
+        float b = fract((r - g) * 100.) + fract(0.1 * debugScale) + fract(0.01 * debugScale);
+        vec3 col = vec3(.8, .8, .1); //clamp(vec3(r, g, b), 0., 1.);
+
+        color = vec4(diffuse * col/*debug.rgb*/, 1.);
+      }
+    </script>
+    <script type="text/glsl" id="rtt_vertex_shader">#version 300 es
+
+      void main() {
+        int nx = gl_VertexID % 2;
+        int ny = (gl_VertexID - nx) / 2;
+
+        gl_Position = vec4(-1. + 2. * vec2(nx, ny), 0., 1.);
+      }
+    </script>
+    <script type="text/glsl" id="rtt_fragment_shader">#version 300 es
+      precision mediump float;
+
+      uniform int res;
+      uniform vec3 patchPos;
+      uniform float scale;
+
+      out vec4 color;
+
+      void main() {
+
+        vec2 texCoords = (vec2(gl_FragCoord.xy) + .5) / float(res - 1);
+        vec2 coords = -.5 + texCoords;
+
+        vec2 world = scale * coords + patchPos.xy;
+
+        float frec = 2.5 * 3.1412;
+        float z = .15*sin(frec*world.x) + .15*sin(frec*world.y);
+        vec3 normal =  vec3(.15*frec*cos(frec*world.x), .15*frec*cos(frec*world.y), 1.);
+        normal = normalize(normal);
+
+        color = vec4(z, normal);
       }
     </script>
   </head>
