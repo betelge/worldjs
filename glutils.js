@@ -14,6 +14,12 @@ var SceneNode = class {
     this.material = material;
 
     this.uniforms = []; // These override any material uniforms with the same name
+
+    this.setScale = function(scalar) {
+      this.scale[0] = scalar;
+      this.scale[1] = scalar;
+      this.scale[2] = scalar;
+    }
   }
 }
 

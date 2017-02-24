@@ -9,9 +9,23 @@ var cam;
 var RES = 32;
 var resUniform;
 
-var squares = [];
+var patches = [];
 
 var controller;
+
+var Quad = class {
+  constructor(x, y, scale)  {
+    this.x = x; // [0, 1] position within the root quad
+    this.y = y;
+    this.scale = scale; // root quad has scale 1
+
+    this.isLeaf = true;
+    this.children = [];
+    this.sceneNode; // Reference to sceneNode
+  }
+}
+
+var root = new Quad(0, 0, 1);
 
 function start() {
   canvas = document.getElementById('canvas');
@@ -39,9 +53,9 @@ function start() {
   material = new Material(program);
   material.uniforms.push(projMatUniform);
 
-  for(var i = -2; i <= 2; i++)
+  /*for(var i = -2; i <= 2; i++)
     for(var j = -2; j <= 2; j++)
-      squares.push(createPatch(material, i, j));
+      patches.push(createPatch(material, i, j));*/
 
   controller = new Controller(cam, cam, canvas, document);
   controller.useAbsoluteZ = true;
@@ -52,7 +66,62 @@ function start() {
   redraw();
 }
 
-function createPatch(material, x, y) {
+function arrangePatches(pos, rot) {
+  patches = [];
+
+  recurseQuad(root, pos, rot);
+}
+
+var lodSplit = .5;
+var lodMerge = lodSplit * 1.1;
+
+function recurseQuad(quad, pos, rot) {
+
+  var dx = quad.x - pos[0];
+  var dy = quad.y - pos[1];
+  var dz = pos[2];
+
+  if(quad.isLeaf) {
+    
+    // Do we split it
+    if(dx*dx + dy*dy + dz*dz < quad.scale*quad.scale * lodSplit*lodSplit) {
+      // Split
+      quad.isLeaf = false;
+      quad.sceneNode = null;
+      quad.children.push(
+          new Quad(quad.x - .25*quad.scale, quad.y - .25*quad.scale, .5*quad.scale));
+      quad.children.push(
+          new Quad(quad.x - .25*quad.scale, quad.y + .25*quad.scale, .5*quad.scale));
+      quad.children.push(
+          new Quad(quad.x + .25*quad.scale, quad.y - .25*quad.scale, .5*quad.scale));
+      quad.children.push(
+          new Quad(quad.x + .25*quad.scale, quad.y + .25*quad.scale, .5*quad.scale));
+    }
+  }
+  else {
+    
+    // Do we merge
+    if(dx*dx + dy*dy + dz*dz > quad.scale*quad.scale * lodMerge*lodMerge) {
+      // Merge
+      quad.isLeaf = true;
+      quad.children = [];
+    }
+  }
+
+  if(quad.isLeaf) {
+    if(!quad.sceneNode) {
+      quad.sceneNode = createPatch(material, quad.x, quad.y, quad.scale);
+    }
+    patches.push(quad.sceneNode);
+  }
+  else {
+    for(var i = 0; i < quad.children.length; i++) {
+      recurseQuad(quad.children[i], pos,rot);
+    }
+  }
+}
+
+function createPatch(material, x, y, scale) {
   var patch = new SceneNode();
   patch.geometry = new Geometry();
   patch.geometry.count = 2*RES * (RES-1) + (RES-2)*2;
@@ -60,6 +129,7 @@ function createPatch(material, x, y) {
 
   patch.position[0] += x;
   patch.position[1] += y;
+  patch.setScale(scale);
 
   patch.uniforms.push(new Uniform("patchPos", gl.FLOAT, [x, y, 0]));
 
@@ -73,14 +143,16 @@ function redraw() {
 function draw() {
 
   controller.updateControls();
+
+  arrangePatches(cam.position, cam.rotation);
   
   gl.clearColor(.1, .1, .3, 1);
   gl.enable(gl.DEPTH_TEST);
   gl.clearDepth(1);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
   
-  for(var i = 0; i < squares.length; i++)
-    m.draw(squares[i]);
+  for(var i = 0; i < patches.length; i++)
+    m.draw(patches[i]);
 
   if(controller.state !== controller.STATE.NONE)
     redraw();
