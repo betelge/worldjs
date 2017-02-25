@@ -69,16 +69,16 @@ function start() {
 }
 
 var frustumMat = mat4.create();
-function arrangePatches(pos, rot) {
+function arrangePatches(camPos, camRot) {
   patches = [];
 
   // Construct matrix for checking against frustum
   mat4.fromRotationTranslationScale(
-      frustumMat, cam.rotation, cam.position, cam.scale);
+      frustumMat, camRot, camPos, cam.scale);
   mat4.invert(frustumMat, frustumMat);
   mat4.mul(frustumMat, projMatUniform.array, frustumMat);
 
-  recurseQuad(root, pos, rot);
+  recurseQuad(root, camPos, camRot);
 }
 
 var lodSplit = 1;
@@ -86,19 +86,20 @@ var lodMerge = lodSplit * 1.1;
 
 var tempVecs = [];
 for(var i = 0; i < 4; i++)
-  tempVecs.push(vec3.create());
+  tempVecs.push(vec4.create());
 
-function recurseQuad(quad, pos, rot) {
+function recurseQuad(quad, camPos, camRot) {
 
   // Ignore if outside frustum
-  // TODO: Checking naivly now
   for(var i = 0; i < 2; i++)
     for(var j = 0; j < 2; j++) {
       tempVecs[2*i+j][0] = quad.x + (i - .5) * quad.scale;
       tempVecs[2*i+j][1] = quad.y + (j - .5) * quad.scale;
       tempVecs[2*i+j][2] = 0;
+      tempVecs[2*i+j][3] = 1; // w coordinate
 
-      vec3.transformMat4(tempVecs[2*i+j], tempVecs[2*i+j], frustumMat);
+      vec4.transformMat4(tempVecs[2*i+j], tempVecs[2*i+j], frustumMat);
+      vec4.scale(tempVecs[2*i+j], tempVecs[2*i+j], 1 / Math.abs(tempVecs[2*i+j][3]));
     }
   
   var isInside = false;
@@ -107,34 +108,8 @@ function recurseQuad(quad, pos, rot) {
       ||(Math.abs(tempVecs[i][0]) <= 1
       && Math.abs(tempVecs[i][1]) <= 1
       && Math.abs(tempVecs[i][2]) <= 1);
-
-      // Perspective correctin for sign when z > 1
-      if(tempVecs[i][2] > 1) {
-        tempVecs[i][0] *= -1;
-        tempVecs[i][1] *= -1;
-      }
   }
-  /*if(!isInside) { // If no points inide frustum, check for intersections
-    var isCrossing = false;
-    for(var i = 0; i < 2; i++) {
-      var is = false;
-      is = is || tempVecs[0][i] * tempVecs[1][i] < 0;
-      is = is || tempVecs[2][i] * tempVecs[3][i] < 0;
-      is = is || tempVecs[1][i] * tempVecs[3][i] < 0;
-      is = is || tempVecs[0][i] * tempVecs[2][i] < 0;
-
-      if(is) {
-        for(var j = 0; j < 4; j++) {
-          if(Math.abs(tempVecs[j][1-i]) <= 1) {
-            isCrossing = true;
-            break;
-          }
-        }
-      }
-    }
-
-    isInside = isInside || isCrossing;
-  }*/
+  
   if(!isInside) {
     var outside = true;
     isInside = true;
@@ -163,20 +138,20 @@ function recurseQuad(quad, pos, rot) {
 
     outside = true;
     for(var i = 0; i < 4; i++) {
-      outside = outside && tempVecs[i][2] > 1;
+      outside = outside && tempVecs[i][2] < -1;
     }
     if(outside) isInside = false;
 
-    // We don't check the z < -1 case (further than far plane)'
+    // We don't check the z > 1 case (further than far plane)'
   }
   if(!isInside) return;
 
   // Check distance
   // TODO: Find a better check than distance to middle of quad
 
-  var dx = quad.x - pos[0];
-  var dy = quad.y - pos[1];
-  var dz = pos[2];
+  var dx = quad.x - camPos[0];
+  var dy = quad.y - camPos[1];
+  var dz = camPos[2];
 
   if(quad.isLeaf) {
     
@@ -215,7 +190,7 @@ function recurseQuad(quad, pos, rot) {
   }
   else {
     for(var i = 0; i < quad.children.length; i++) {
-      recurseQuad(quad.children[i], pos,rot);
+      recurseQuad(quad.children[i], camPos, camRot);
     }
   }
 }
