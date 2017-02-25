@@ -303,15 +303,23 @@ function initWebGL(canvas, version) {
 }
 
 function retrieveInnerText(shaderScript) {
+  if(!shaderScript.length) {// Not an array of shaders to merge
+    shaderScript = [shaderScript];
+  }
+
   var source = "";
-  var currentChild = shaderScript.firstChild;
-  
-  while(currentChild) {
-    if (currentChild.nodeType == 3) {
-      source += currentChild.textContent;
+  for(var i = 0; i < shaderScript.length; i++) {
+    var currentChild = shaderScript[i].firstChild;
+
+    while(currentChild) {
+      if (currentChild.nodeType == 3) {
+        source += currentChild.textContent;
+      }
+
+      currentChild = currentChild.nextSibling;
     }
-    
-    currentChild = currentChild.nextSibling;
+
+    source += "\n";
   }
 
   return source;
