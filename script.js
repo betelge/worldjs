@@ -81,7 +81,7 @@ function arrangePatches(camPos, camRot) {
   recurseQuad(root, camPos, camRot);
 }
 
-var lodSplit = 1;
+var lodSplit = 1.5;
 var lodMerge = lodSplit * 1.1;
 
 var tempVecs = [];
@@ -142,21 +142,27 @@ function recurseQuad(quad, camPos, camRot) {
     }
     if(outside) isInside = false;
 
-    // We don't check the z > 1 case (further than far plane)'
+    outside = true;
+    for(var i = 0; i < 4; i++) {
+      outside = outside && tempVecs[i][2] > 1;
+    }
+    if(outside) isInside = false;
   }
   if(!isInside) return;
 
   // Check distance
-  // TODO: Find a better check than distance to middle of quad
-
-  var dx = quad.x - camPos[0];
-  var dy = quad.y - camPos[1];
+  var dxa = quad.x  - .5 * quad.scale - camPos[0];
+  var dxb = quad.x  + .5 * quad.scale - camPos[0];
+  var dya = quad.y  - .5 * quad.scale - camPos[1];
+  var dyb = quad.y  + .5 * quad.scale - camPos[1];
   var dz = camPos[2];
+  var dx2 = Math.min(dxa * dxa, dxb * dxb);
+  var dy2 = Math.min(dya * dya, dyb * dyb);
 
   if(quad.isLeaf) {
     
     // Do we split it
-    if(dx*dx + dy*dy + dz*dz < quad.scale*quad.scale * lodSplit*lodSplit) {
+    if(dx2 + dy2 + dz*dz < quad.scale*quad.scale * lodSplit*lodSplit) {
       // Split
       quad.isLeaf = false;
       quad.sceneNode = null;
@@ -173,7 +179,7 @@ function recurseQuad(quad, camPos, camRot) {
   else {
     
     // Do we merge
-    if(dx*dx + dy*dy + dz*dz > quad.scale*quad.scale * lodMerge*lodMerge) {
+    if(dx2 + dy2 + dz*dz > quad.scale*quad.scale * lodMerge*lodMerge) {
       // Merge
       quad.isLeaf = true;
       for(var i = 0; i < quad.children.length; i++)
