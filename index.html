@@ -40,19 +40,18 @@
         int e2 = odd*extra;
         int nx = col - e1 - res*e2;
         int ny = row + odd + e1;
-        
+
         vec2 texCoords = vec2(nx, ny) / float(res - 1);
         vec2 coords = -.5 + texCoords;
 
-        vec2 world = scale * coords + patchPos.xy;
-
-        vec3 heightNormal = texture(heightTexture, texCoords).xyz;
-        debug = vec4(1000.*heightNormal, 1.);
+        vec4 heightNormal = texelFetch(heightTexture, ivec2(nx, ny), 0);
+        debug = heightNormal;
         float z = heightNormal.x;
-        z /= scale;
+        z /= scale; // Needed becasue bigger tiles are scaled in all 3 dimensionswith mvMat
+        // TODO: Do we need to alter the normal becasue of scaled z?
         debugScale = scale;
 
-        vec4 norm4 = vec4(normalize(vec3(heightNormal.yz, 1.)), 1.);
+        vec4 norm4 = vec4(normalize(heightNormal.yzw), 1.);
         norm4 = normMat * norm4;
         normal = norm4.xyz / norm4.w;
 
@@ -103,7 +102,7 @@
 
       void main() {
 
-        vec2 texCoords = (vec2(gl_FragCoord.xy) + .5) / float(res - 1);
+        vec2 texCoords = (gl_FragCoord.xy - .5) / float(res - 1);
         vec2 coords = -.5 + texCoords;
 
         vec2 world = scale * coords + patchPos.xy;
