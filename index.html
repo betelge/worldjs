@@ -72,7 +72,7 @@
 
       void main() {
         vec3 n = normalize(normal);
-        vec3 lightDir = vec3(0., 0., 1.);
+        vec3 lightDir = vec3(1., 0., 0.);
         float diffuse = 0.3 + .7* max(0.0, dot(n, lightDir));
 
         float r = abs(1. - debugScale);
@@ -111,18 +111,9 @@
 
         vec3 world = vec3(scale * coords + patchPos.xy, 0.);
 
-        float s = snoise(.03*world);
-        vec3 dist = vec3(s, .5-.5*s, 0.);
-        float main = 5.*snoise(.025*world+dist) * snoise(.1*dist);
-        float ruff = max(0., main);
         vec3 grad = vec3(0.);
-        float z = main
-                  + snoise(.05*world, grad, s*2.5)
-                  /*+ snoise(.1*world, grad, s*1.25)
-                  + snoise(.2*world, grad, 0.125)
-                  + snoise(5.*world, grad, ruff*0.02)
-                  + snoise(10.*world, grad, ruff*0.01)
-                  + snoise(20.*world, grad, ruff*0.005)*/;
+        float z = snoise(world, grad, 1.);
+                  
 
         vec3 normal = vec3(0., 0., 1.);
         normal =  grad - dot(grad, normal) * normal + normal;
@@ -247,9 +238,9 @@
         vec4 yy = vec4(x0.y, x1.y, x2.y, x3.y);
         vec4 pz = vec4(p0.z, p1.z, p2.z, p3.z);
         vec4 zz = vec4(x0.z, x1.z, x2.z, x3.z);
-        grad.x += scale * 42.0 * dot(m3, m1*px-8.*gr*xx);
-        grad.y += scale * 42.0 * dot(m3, m1*py-8.*gr*yy);
-        grad.z += scale * 42.0 * dot(m3, m1*pz-8.*gr*zz);
+        grad.x += .25*scale * 42.0 * dot(m3, m1*px-8.*gr*xx);
+        grad.y += .25*scale * 42.0 * dot(m3, m1*py-8.*gr*yy);
+        grad.z += .25*scale * 42.0 * dot(m3, m1*pz-8.*gr*zz);
         return scale * 42.0 * dot( m*m, gr );
       }
 
