@@ -155,14 +155,16 @@ function recurseQuad(quad, camPos, camRot) {
   var dxb = quad.x  + .5 * quad.scale - camPos[0];
   var dya = quad.y  - .5 * quad.scale - camPos[1];
   var dyb = quad.y  + .5 * quad.scale - camPos[1];
-  var dz = camPos[2];
+  var dza = -quad.scale - camPos[2]; // TODO: Height is not constant
+  var dzb = +quad.scale - camPos[2];
   var dx2 = Math.min(dxa * dxa, dxb * dxb);
   var dy2 = Math.min(dya * dya, dyb * dyb);
+  var dz2 = Math.min(dza * dza, dzb * dzb);
 
   if(quad.isLeaf) {
     
     // Do we split it
-    if(dx2 + dy2 + dz*dz < quad.scale*quad.scale * lodSplit*lodSplit) {
+    if(dx2 + dy2 + dz2 < quad.scale*quad.scale * lodSplit*lodSplit) {
       // Split
       quad.isLeaf = false;
       quad.sceneNode = null;
@@ -179,7 +181,7 @@ function recurseQuad(quad, camPos, camRot) {
   else {
     
     // Do we merge
-    if(dx2 + dy2 + dz*dz > quad.scale*quad.scale * lodMerge*lodMerge) {
+    if(dx2 + dy2 + dz2 > quad.scale*quad.scale * lodMerge*lodMerge) {
       // Merge
       quad.isLeaf = true;
       for(var i = 0; i < quad.children.length; i++)
