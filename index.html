@@ -50,7 +50,7 @@
         float ht = texelFetch(heightTexture, ivec2(nx, ny + 1), 0).r;
         float hb = texelFetch(heightTexture, ivec2(nx, ny - 1), 0).r;
 
-        vec4 norm4 = vec4(normalize(vec3((hr-hl), (ht-hb), scale/100.)), 1.);
+        vec4 norm4 = vec4(normalize(vec3((hr-hl), (ht-hb), scale/float(res))), 1.);
 
         debug = heightNormal;
         float z = heightNormal.x;
