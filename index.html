@@ -45,12 +45,6 @@
         vec2 coords = -.5 + texCoords;
 
         vec4 heightNormal = texelFetch(heightTexture, ivec2(nx, ny), 0);
-        float hl = texelFetch(heightTexture, ivec2(nx - 1, ny), 0).r;
-        float hr = texelFetch(heightTexture, ivec2(nx + 1, ny), 0).r;
-        float ht = texelFetch(heightTexture, ivec2(nx, ny + 1), 0).r;
-        float hb = texelFetch(heightTexture, ivec2(nx, ny - 1), 0).r;
-
-        vec4 norm4 = vec4(normalize(vec3((hr-hl), (ht-hb), scale/float(res))), 1.);
 
         debug = heightNormal;
         float z = heightNormal.x;
@@ -58,7 +52,7 @@
         // TODO: Do we need to alter the normal becasue of scaled z?
         debugScale = scale;
 
-        //vec4 norm4 = vec4(normalize(heightNormal.yzw), 1.);
+        vec4 norm4 = vec4(normalize(heightNormal.yzw), 1.);
         norm4 = normMat * norm4;
         normal = norm4.xyz / norm4.w;
 
@@ -78,7 +72,7 @@
 
       void main() {
         vec3 n = normalize(normal);
-        vec3 lightDir = vec3(0, 0, 1);
+        vec3 lightDir = vec3(0., 0., 1.);
         float diffuse = 0.3 + .7* max(0.0, dot(n, lightDir));
 
         float r = abs(1. - debugScale);
@@ -107,22 +101,29 @@
 
       out vec4 color;
 
-      float snoise(vec2 v); // 2D Simplex noise 
+      float snoise(vec3 v); // 3D Simplex noise
+      float snoise(vec3 v, out vec3 grad);
 
       void main() {
 
         vec2 texCoords = (gl_FragCoord.xy - .5) / float(res - 1);
         vec2 coords = -.5 + texCoords;
 
-        vec2 world = scale * coords + patchPos.xy;
+        vec3 world = vec3(scale * coords + patchPos.xy, 0.);
 
-        //float s = snoise(.03*world);
-        //vec2 dist = vec2(s, .5-.5*s);
-        //float main = 5.*snoise(.025*world+dist) * snoise(.1*dist);
-        //float ruff = max(0., main);
-        float z = snoise(world);
+        vec3 grad = vec3(0.);
+        vec3 grad2 = vec3(0.);
+        float z = 4.*snoise(.1*world, grad);
+        float z2 = 4.*snoise(.1*world, grad2);
+        grad *= .1*4.;
+        grad2 *= .1*4.;
+        grad = grad * z2 + grad2 * z + grad * grad2;
+        z *= z2;
+                  
 
-        vec3 normal =  vec3(0.);
+        vec3 normal = vec3(0., 0., 1.); // Normal of base surface (z)
+        normal =  grad - dot(grad, normal) * normal + normal;
+        normal = normalize(normal);
 
         color = vec4(z, normal);
       }
@@ -158,7 +159,102 @@
         g.yz = a0.yz * x12.xz + h.yz * x12.yw;
         return 130.0 * dot(m, g);
       }
-    </script
+    </script>
+    <script type="text/glsl" id="simplex3d_shader">
+      //  Simplex 3D Noise 
+      //  by Ian McEwan, Ashima Arts
+      //
+      vec4 permute(vec4 x){return mod(((x*34.0)+1.0)*x, 289.0);}
+      vec4 taylorInvSqrt(vec4 r){return 1.79284291400159 - 0.85373472095314 * r;}
+
+      // Gradiant added by betelge
+
+      float snoise(vec3 v, out vec3 grad) { 
+        const vec2  C = vec2(1.0/6.0, 1.0/3.0) ;
+        const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);
+
+      // First corner
+        vec3 i  = floor(v + dot(v, C.yyy) );
+        vec3 x0 =   v - i + dot(i, C.xxx) ;
+
+      // Other corners
+        vec3 g = step(x0.yzx, x0.xyz);
+        vec3 l = 1.0 - g;
+        vec3 i1 = min( g.xyz, l.zxy );
+        vec3 i2 = max( g.xyz, l.zxy );
+
+        //  x0 = x0 - 0. + 0.0 * C 
+        vec3 x1 = x0 - i1 + 1.0 * C.xxx;
+        vec3 x2 = x0 - i2 + 2.0 * C.xxx;
+        vec3 x3 = x0 - 1. + 3.0 * C.xxx;
+
+      // Permutations
+        i = mod(i, 289.0 ); 
+        vec4 p = permute( permute( permute( 
+                   i.z + vec4(0.0, i1.z, i2.z, 1.0 ))
+                 + i.y + vec4(0.0, i1.y, i2.y, 1.0 )) 
+                 + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));
+
+      // Gradients
+      // ( N*N points uniformly over a square, mapped onto an octahedron.)
+        float n_ = 1.0/7.0; // N=7
+        vec3  ns = n_ * D.wyz - D.xzx;
+
+        vec4 j = p - 49.0 * floor(p * ns.z *ns.z);  //  mod(p,N*N)
+
+        vec4 x_ = floor(j * ns.z);
+        vec4 y_ = floor(j - 7.0 * x_ );    // mod(j,N)
+
+        vec4 x = x_ *ns.x + ns.yyyy;
+        vec4 y = y_ *ns.x + ns.yyyy;
+        vec4 h = 1.0 - abs(x) - abs(y);
+
+        vec4 b0 = vec4( x.xy, y.xy );
+        vec4 b1 = vec4( x.zw, y.zw );
+
+        vec4 s0 = floor(b0)*2.0 + 1.0;
+        vec4 s1 = floor(b1)*2.0 + 1.0;
+        vec4 sh = -step(h, vec4(0.0));
+
+        vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy ;
+        vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww ;
+
+        vec3 p0 = vec3(a0.xy,h.x);
+        vec3 p1 = vec3(a0.zw,h.y);
+        vec3 p2 = vec3(a1.xy,h.z);
+        vec3 p3 = vec3(a1.zw,h.w);
+
+      //Normalise gradients
+        vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
+        p0 *= norm.x;
+        p1 *= norm.y;
+        p2 *= norm.z;
+        p3 *= norm.w;
+
+      // Mix final noise value and gradient
+        vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+        vec4 m1 = m;
+        m = m * m;
+        vec4 m3 = m * m1;
+        vec4 gr = vec4( dot(p0,x0), dot(p1,x1),
+                        dot(p2,x2), dot(p3,x3) );
+        vec4 px = vec4(p0.x, p1.x, p2.x, p3.x); // Can all this be repalced by matrix muls?
+        vec4 xx = vec4(x0.x, x1.x, x2.x, x3.x);
+        vec4 py = vec4(p0.y, p1.y, p2.y, p3.y);
+        vec4 yy = vec4(x0.y, x1.y, x2.y, x3.y);
+        vec4 pz = vec4(p0.z, p1.z, p2.z, p3.z);
+        vec4 zz = vec4(x0.z, x1.z, x2.z, x3.z);
+        grad.x = 42.0 * dot(m3, m1*px-8.*gr*xx);
+        grad.y = 42.0 * dot(m3, m1*py-8.*gr*yy);
+        grad.z = 42.0 * dot(m3, m1*pz-8.*gr*zz);
+        return 42.0 * dot( m*m, gr );
+      }
+
+      float snoise(vec3 v) {
+        vec3 grad = vec3(0.);
+        return snoise(v, grad);
+      }
+    </script>
   </head>
   <style>
     body {
