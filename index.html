@@ -72,7 +72,7 @@
 
       void main() {
         vec3 n = normalize(normal);
-        vec3 lightDir = vec3(0., 0., 1.);
+        vec3 lightDir = vec3(0., .707, .707);
         float diffuse = 0.3 + .7* max(0.0, dot(n, lightDir));
 
         float r = abs(1. - debugScale);
@@ -112,11 +112,25 @@
         vec3 world = vec3(scale * coords + patchPos.xy, 0.);
 
         vec3 grad = vec3(0.);
+        vec3 gradb = vec3(0.);
         vec3 grad2 = vec3(0.);
-        float z = 4.*snoise(.1*world, grad);
-        float z2 = 4.*snoise(.1*world, grad2);
-        grad *= .1*4.;
-        grad2 *= .1*4.;
+        float z = 2.+2.*snoise(.1*world, grad);
+        float zb = 4.*4.*snoise(.05*world, gradb);
+        float z2 = 4.*snoise(.01*world, grad2);
+        grad *= .1*2.;
+        gradb *= .05*4.;
+        //grad += gradb;
+        //z += zb;
+        grad2 *= .01*4.;
+
+        float lim = 0.6;
+        float sm = .2;
+        if(z2 < lim) {
+          float s = (max(sm*lim, z2) - sm*lim) / ((1.-sm)*lim);
+          z2 = sm*lim + s*(1.-sm)*lim;
+          grad2 *= s;
+        }
+
         grad = grad * z2 + grad2 * z + grad * grad2;
         z *= z2;
                   
