@@ -45,12 +45,6 @@
         vec2 coords = -.5 + texCoords;
 
         vec4 heightNormal = texelFetch(heightTexture, ivec2(nx, ny), 0);
-        float hl = texelFetch(heightTexture, ivec2(nx - 1, ny), 0).r;
-        float hr = texelFetch(heightTexture, ivec2(nx + 1, ny), 0).r;
-        float ht = texelFetch(heightTexture, ivec2(nx, ny + 1), 0).r;
-        float hb = texelFetch(heightTexture, ivec2(nx, ny - 1), 0).r;
-
-        vec4 norm4 = vec4(normalize(vec3((hr-hl), (ht-hb), scale/float(res))), 1.);
 
         debug = heightNormal;
         float z = heightNormal.x;
@@ -58,7 +52,7 @@
         // TODO: Do we need to alter the normal becasue of scaled z?
         debugScale = scale;
 
-        //vec4 norm4 = vec4(normalize(heightNormal.yzw), 1.);
+        vec4 norm4 = vec4(normalize(heightNormal.yzw), 1.);
         norm4 = normMat * norm4;
         normal = norm4.xyz / norm4.w;
 
@@ -127,7 +121,9 @@
                   + ruff*0.02*snoise(5.*world)
                   + ruff*0.01*snoise(10.*world)
                   + ruff*0.005*snoise(20.*world);
-        vec3 normal =  vec3(0.);
+                  
+        vec3 normal =  vec3(dFdxFine(z), dFdyFine(z), scale/float(res));
+        normal = normalize(normal);
 
         color = vec4(z, normal);
       }
