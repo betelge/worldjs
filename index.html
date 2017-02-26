@@ -118,11 +118,15 @@
 
         float s = snoise(.03*world);
         vec2 dist = vec2(s, .5-.5*s);
-        float z =   5.*snoise(.025*world+dist)
-                  + s*2.5*snoise(.05*world) + 
-                  + s*1.25*snoise(.1*world) + 
-                  + 0.125*snoise(.2*world) + 
-                  + s*0.0625*snoise(.4*world);
+        float main = 5.*snoise(.025*world+dist) * snoise(.1*dist);
+        float ruff = max(0., main);
+        float z = main
+                  + s*2.5*snoise(.05*world)
+                  + s*1.25*snoise(.1*world)
+                  + 0.125*snoise(.2*world)
+                  + ruff*0.02*snoise(5.*world)
+                  + ruff*0.01*snoise(10.*world)
+                  + ruff*0.005*snoise(20.*world);
         vec3 normal =  vec3(0.);
 
         color = vec4(z, normal);
