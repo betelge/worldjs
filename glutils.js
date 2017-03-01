@@ -28,6 +28,7 @@ var Camera = class extends SceneNode {
   constructor(fov) {
     super();
     this.fov = fov;
+    this.viewMatUniform = new Uniform("vMat", gl.FLOAT, mat4.create());
   }
 }
 
@@ -50,7 +51,8 @@ var Material = class {
     this.uniforms = [];
 
     // Special tags
-    this.mvMatUniform = undefined;
+    this.mMatUniform = undefined;
+    this.vMatUniform = undefined;
     this.normMatUniform = undefined;
   }
 }
@@ -241,22 +243,24 @@ var Manager = class {
 
   draw(sceneNode) {
 
-    if(!sceneNode.material.mvMatUniform && sceneNode.material) {
-      sceneNode.material.mvMatUniform = new Uniform("mvMat", gl.FLOAT, mat4.create());
-      sceneNode.material.uniforms.push(sceneNode.material.mvMatUniform);
+    if(!sceneNode.material.mMatUniform && sceneNode.material) {
+      sceneNode.material.mMatUniform = new Uniform("mMat", gl.FLOAT, mat4.create());
+      sceneNode.material.uniforms.push(sceneNode.material.mMatUniform);
+
+      sceneNode.material.vMatUniform = new Uniform("vMat", gl.FLOAT, mat4.create());
+      sceneNode.material.uniforms.push(sceneNode.material.vMatUniform);
 
       sceneNode.material.normMatUniform = new Uniform("normMat", gl.FLOAT, mat4.create());
       sceneNode.material.uniforms.push(sceneNode.material.normMatUniform);
     }
 
-    if(sceneNode.material) {
-      quat.conjugate(this.tempRot, cam.rotation);
-      vec3.sub(this.tempPos, sceneNode.position, cam.position);
-      vec3.transformQuat(this.tempPos, this.tempPos, this.tempRot);
-      quat.mul(this.tempRot, sceneNode.rotation, this.tempRot);
+    if(sceneNode.material) {      
+      mat4.fromRotationTranslationScale(
+          sceneNode.material.mMatUniform.array, sceneNode.rotation, sceneNode.position, sceneNode.scale);
 
       mat4.fromRotationTranslationScale(
-          sceneNode.material.mvMatUniform.array, this.tempRot, this.tempPos, sceneNode.scale);
+          sceneNode.material.vMatUniform.array, cam.rotation, cam.position, cam.scale);
+      mat4.invert(sceneNode.material.vMatUniform.array, sceneNode.material.vMatUniform.array);
 
       mat4.fromRotationTranslationScale(
           sceneNode.material.normMatUniform.array, sceneNode.rotation, this.zeroPos, sceneNode.scale)

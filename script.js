@@ -10,6 +10,14 @@ var RES = 128;
 var resUniform;
 var isLODFrozen = false;
 
+var znear = .05;
+var zfar = 1000000;
+
+var lodSplit = 1.5;
+var lodMerge = lodSplit * 1.1;
+
+var planetRadius = 1000000;
+
 var patches = [];
 var patchPool = [];
 
@@ -27,7 +35,7 @@ var Quad = class {
   }
 }
 
-var root = new Quad(0, 0, 1000);
+var root = new Quad(0, 0, planetRadius);
 
 function start() {
   canvas = document.getElementById('canvas');
@@ -63,6 +71,9 @@ function start() {
   resUniform = new Uniform("res", gl.INT, RES);
   material.uniforms.push(resUniform);
 
+  material.uniforms.push(new Uniform("radius", gl.FLOAT, planetRadius));
+
+
   redraw();
 
   addEventListener("keydown", keyDown);
@@ -80,9 +91,6 @@ function arrangePatches(camPos, camRot) {
 
   recurseQuad(root, camPos, camRot);
 }
-
-var lodSplit = 1.5;
-var lodMerge = lodSplit * 1.1;
 
 var tempVecs = [];
 for(var i = 0; i < 4; i++)
@@ -328,7 +336,7 @@ function resize(event) {
   
   gl.viewport(0, 0, canvas.width, canvas.height);
 
-  mat4.perspective(projMatUniform.array, cam.fov, canvas.width / canvas.height, .05, 1000);
+  mat4.perspective(projMatUniform.array, cam.fov, canvas.width / canvas.height, znear, zfar);
 
   redraw();
 }
