@@ -1,4 +1,4 @@
-var Controller = function(object, cam, canvas, document) {
+var Controller = function(object, cam, radius, canvas, document) {
 
   this.object = object;
   this.cam = cam;
@@ -217,7 +217,13 @@ var Controller = function(object, cam, canvas, document) {
     if ( delta < 0 )
       zoomSpeed *= -1;
 
-    vec3.scale(look, look, zoomSpeed * Math.abs(cam.position[2]));
+    var camh = vec3.length(cam.position);
+    var margin = .1;
+    if(camh < radius + margin) {
+      vec3.scale(cam.position, cam.position, radius / camh + margin);
+    }
+
+    vec3.scale(look, look, zoomSpeed * (camh - radius));
 
     vec3.add(cam.position, cam.position, look);
   }

@@ -50,7 +50,7 @@
 
         debug = heightNormal;
         float z = heightNormal.x;
-        z /= scale; // Needed becasue bigger tiles are scaled in all 3 dimensionswith mvMat
+        //z /= scale; // Needed becasue bigger tiles are scaled in all 3 dimensionswith mvMat
         // TODO: Do we need to alter the normal becasue of scaled z?
         debugScale = scale;
 
@@ -58,8 +58,11 @@
         norm4 = normMat * norm4;
         normal = norm4.xyz / norm4.w;
 
-        modelPos = vec3(coords, z);
+        modelPos = vec3(coords, radius / scale);
         vec4 worldPos = mMat * vec4(modelPos, 1.);
+        worldPos /= worldPos.w;
+        vec3 upVec = normalize(worldPos.xyz);
+        worldPos.xyz = (radius + z)*upVec;
         gl_Position = projMat * vMat * worldPos;
       }
     </script>

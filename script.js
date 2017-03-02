@@ -16,9 +16,9 @@ var zfar = 1000000;
 var lodSplit = 1.5;
 var lodMerge = lodSplit * 1.1;
 
-var planetRadius = 1000000;
+var planetRadius = 1000;
 
-var patches = [];
+var patches = [];0
 var patchPool = [];
 
 var controller;
@@ -35,7 +35,7 @@ var Quad = class {
   }
 }
 
-var root = new Quad(0, 0, planetRadius);
+var root = new Quad(0, 0, 2 * planetRadius);
 
 function start() {
   canvas = document.getElementById('canvas');
@@ -65,7 +65,7 @@ function start() {
   material = new Material(program);
   material.uniforms.push(projMatUniform);
 
-  controller = new Controller(cam, cam, canvas, document);
+  controller = new Controller(cam, cam, planetRadius, canvas, document);
   controller.useAbsoluteZ = true;
 
   resUniform = new Uniform("res", gl.INT, RES);
@@ -103,9 +103,11 @@ function recurseQuad(quad, camPos, camRot) {
     for(var j = 0; j < 2; j++) {
       tempVecs[2*i+j][0] = quad.x + (i - .5) * quad.scale;
       tempVecs[2*i+j][1] = quad.y + (j - .5) * quad.scale;
-      tempVecs[2*i+j][2] = 0;
+      tempVecs[2*i+j][2] = planetRadius;
       tempVecs[2*i+j][3] = 1; // w coordinate
 
+      var length = vec3.length(tempVecs[2*i+j]);
+      vec3.scale(tempVecs[2*i+j], tempVecs[2*i+j], planetRadius / length);
       vec4.transformMat4(tempVecs[2*i+j], tempVecs[2*i+j], frustumMat);
       vec4.scale(tempVecs[2*i+j], tempVecs[2*i+j], 1 / Math.abs(tempVecs[2*i+j][3]));
     }
@@ -163,6 +165,7 @@ function recurseQuad(quad, camPos, camRot) {
   var dxb = quad.x  + .5 * quad.scale - camPos[0];
   var dya = quad.y  - .5 * quad.scale - camPos[1];
   var dyb = quad.y  + .5 * quad.scale - camPos[1];
+  
   var dza = -quad.scale - camPos[2]; // TODO: Height is not constant
   var dzb = +quad.scale - camPos[2];
   var dx2 = Math.min(dxa * dxa, dxb * dxb);
