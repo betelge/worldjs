@@ -113,7 +113,7 @@ function arrangePatches(camPos, camRot) {
 
     // Construct matrix for checking against frustum
     mat4.fromRotationTranslationScale(
-        frustumMat, qCamRot, qCamPos, cam.scale); // Cam scale doesn't get rotates properly
+        frustumMat, qCamRot, qCamPos, cam.scale); // Cam scale doesn't get rotated properly
     mat4.invert(frustumMat, frustumMat);
     mat4.mul(frustumMat, projMatUniform.array, frustumMat);
     recurseQuad(root, qCamPos, qCamRot);
@@ -134,8 +134,10 @@ function recurseQuad(quad, camPos, camRot) {
       tempVecs[2*i+j][2] = planet.radius;
       tempVecs[2*i+j][3] = 1; // w coordinate
 
-      var length = vec3.length(tempVecs[2*i+j]);
-      vec3.scale(tempVecs[2*i+j], tempVecs[2*i+j], planet.radius / length); // TODO: Does it work for flat plane?
+      if(planet.radius > 0) {
+        var length = vec3.length(tempVecs[2*i+j]);
+        vec3.scale(tempVecs[2*i+j], tempVecs[2*i+j], planet.radius / length);
+      }
       vec4.transformMat4(tempVecs[2*i+j], tempVecs[2*i+j], frustumMat);
       vec4.scale(tempVecs[2*i+j], tempVecs[2*i+j], 1 / Math.abs(tempVecs[2*i+j][3]));
     }
@@ -186,7 +188,7 @@ function recurseQuad(quad, camPos, camRot) {
     }
     if(outside) isInside = false;
   }
-  if(!isInside) return;
+  //if(!isInside) return;
 
   // Check distance
   if(planet.radius == 0) { // Flat plane
@@ -215,7 +217,7 @@ function recurseQuad(quad, camPos, camRot) {
 
   if(quad.isLeaf) {
     
-    // Do we split it
+    // Do we split it?
     if(dist < quad.scale*quad.scale * lodSplit*lodSplit) {
       // Split
       quad.isLeaf = false;
@@ -228,11 +230,16 @@ function recurseQuad(quad, camPos, camRot) {
           new Quad(quad.x + .25*quad.scale, quad.y - .25*quad.scale, .5*quad.scale));
       quad.children.push(
           new Quad(quad.x + .25*quad.scale, quad.y + .25*quad.scale, .5*quad.scale));
+
+      for(var i = 0; i < quad.children.length; i++) {
+        quat.copy(quad.children[i].rot, quad.rot);
+        quat.copy(quad.children[i].invRot, quad.invRot);
+      }
     }
   }
   else {
     
-    // Do we merge
+    // Do we merge?
     if(dist > quad.scale*quad.scale * lodMerge*lodMerge) {
       // Merge
       quad.isLeaf = true;
@@ -245,9 +252,9 @@ function recurseQuad(quad, camPos, camRot) {
 
   if(quad.isLeaf) {
     if(!quad.sceneNode) {
-      quad.sceneNode = createPatch(material, quad.x, quad.y, quad.scale);
+      quad.sceneNode = createPatch(material, quad.x, quad.y, quad.scale, quad.rot);
       vec3.transformQuat(quad.sceneNode.position, quad.sceneNode.position, quad.rot);
-      quat.mul(quad.sceneNode.rotation, quad.sceneNode.rotation, quad.rot);
+      quat.copy(quad.sceneNode.rotation, quad.rot);
     }
     patches.push(quad.sceneNode);
   }
@@ -264,8 +271,10 @@ var rttProgram = -1;
 var rttResLocation = -1;
 var rttPatchPosLocation = -1;
 var rttScaleLocation = -1;
+var rttRadiusLocation = -1;
+var rttNormMatLocation = -1;
 
-function doProc(texture, x, y, scale) {
+function doProc(texture, x, y, scale, normMat) {
   
   if(texture.glname === -1)
     m.initTexture(texture);
@@ -281,6 +290,8 @@ function doProc(texture, x, y, scale) {
     rttResLocation = gl.getUniformLocation(rttProgram, "res");
     rttPatchPosLocation = gl.getUniformLocation(rttProgram, "patchPos");
     rttScaleLocation = gl.getUniformLocation(rttProgram, "scale");
+    rttRadiusLocation = gl.getUniformLocation(rttProgram, "radius");
+    rttNormMatLocation = gl.getUniformLocation(rttProgram, "normMat");
   }
 
   gl.useProgram(rttProgram);
@@ -289,6 +300,11 @@ function doProc(texture, x, y, scale) {
   gl.uniform1i(rttResLocation, RES);
   gl.uniform3f(rttPatchPosLocation, x, y, 0);
   gl.uniform1f(rttScaleLocation, scale);
+  gl.uniform1f(rttRadiusLocation, planet.radius);
+
+  var nMat = mat3.create();
+  mat3.fromQuat(nMat, normMat);
+  gl.uniformMatrix3fv(rttNormMatLocation, false, nMat);
 
   gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, rttFbo);
 
@@ -307,7 +323,7 @@ function doProc(texture, x, y, scale) {
 
 
 
-function createPatch(material, x, y, scale) {
+function createPatch(material, x, y, scale, normMat) {
   var patch;
   if(patchPool.length === 0) {
     patch = new SceneNode();
@@ -322,13 +338,14 @@ function createPatch(material, x, y, scale) {
 
 
   // Fill texture
-  doProc(patch.heightTexture, x, y, scale);
+  doProc(patch.heightTexture, x, y, scale, normMat);
 
   patch.geometry.count = 2*RES * (RES-1) + (RES-2)*2;
   patch.material = material;
 
   patch.position[0] = x;
   patch.position[1] = y;
+  patch.position[2] = 0;
   patch.setScale(scale);
 
   patch.uniforms.push(new Uniform("patchPos", gl.FLOAT, [x, y, 0]));
