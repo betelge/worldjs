@@ -197,15 +197,45 @@ var Controller = function(object, cam, radius, canvas, document) {
         return;
     var point0 = vec3.fromValues(2 * panStart[0] / self.canvas.clientWidth - 1, -2 * panStart[1] / self.canvas.clientHeight + 1, 0);
     var point1 = vec3.fromValues(2 * panEnd[0] / self.canvas.clientWidth - 1, -2 * panEnd[1] / self.canvas.clientHeight + 1, 0);
-    rayHit(point0);
-    rayHit(point1);
+    var hit1 = rayHit(point0);
+    var hit2 = rayHit(point1);
 
-    if(self.isInverted)
-      vec3.sub(point1, point0, point1);
-    else
-      vec3.sub(point1, point1, point0);
+    if( !hit1 || !hit2 )
+      return;
 
-    vec3.add(object.position, object.position, point1);
+    if(radius == 0) {// Flat plane
+      if(self.isInverted)
+        vec3.sub(point1, point0, point1);
+      else
+        vec3.sub(point1, point1, point0);
+
+      vec3.add(object.position, object.position, point1);
+    }
+    else { // Sphere
+
+      if(vec3.distance(point0, point1) < radius / 1000) {
+        // Angle to small for rotation around planet center
+        // Behave like on flat plane
+        // TODO: Rotation correction
+        if(self.isInverted)
+          vec3.sub(point1, point0, point1);
+        else
+          vec3.sub(point1, point1, point0);
+
+        vec3.add(object.position, object.position, point1);
+        return;
+      }
+      vec3.normalize(point0, point0);
+      vec3.normalize(point1, point1);
+
+      var rotQuat = quat.create();
+      if(self.isInverted)
+        quat.rotationTo(rotQuat, point1, point0);
+      else
+        quat.rotationTo(rotQuat, point0, point1);
+      vec3.transformQuat(cam.position, cam.position, rotQuat);
+      quat.mul(cam.rotation, rotQuat, cam.rotation);
+    }
   }
 
   function zoomCam(delta) {
@@ -242,8 +272,16 @@ var Controller = function(object, cam, radius, canvas, document) {
     quat.invert(tempRot, object.rotation);
 
     if(self.useAbsoluteZ) {
-      // Rotation around global z axis
-      quat.setAxisAngle(tempRot, vec3.fromValues(0,0,1), -rotSpeed * dRot[0] / canvas.clientWidth);
+      var axis = vec3.create();
+      if(radius == 0) {// Flat plane
+        // Rotation around global z axis
+        vec3.set(axis, 0,0,1)
+      }
+      else { // Sphere
+        vec3.copy(axis, cam.position);
+        vec3.normalize(axis, axis);
+      }
+      quat.setAxisAngle(tempRot, axis, -rotSpeed * dRot[0] / canvas.clientWidth);
       quat.mul(object.rotation, tempRot, object.rotation);
     }
     else {
@@ -278,10 +316,35 @@ var Controller = function(object, cam, radius, canvas, document) {
     vec3.transformMat4(point, point, projMatrixInverse) // Accounts for camera FOV and canvas shape
     vec3.transformMat3(point, point, justRotInverse);
 
-    // Project ray onto z == 0 plane
-    var distMult = camPos[2] / point[2];
-    vec3.scale(point, point, -distMult);
-    vec3.add(point, camPos, point);
+    if(radius == 0) { // Flat plane
+      // Project ray onto z == 0 plane
+      var distMult = camPos[2] / point[2];
+      vec3.scale(point, point, -distMult);
+      vec3.add(point, camPos, point);
+    }
+    else { // Sphere
+      var rr = radius * radius;
+      vec3.normalize(point, point); // Ray dir
+      var ang = vec3.dot(point, camPos);
+
+      if(ang > 0) return false; // No hit
+
+      var a = vec3.clone(point);
+      vec3.scale(a, a, -ang);
+      vec3.add(a, a, camPos);
+      var aa = vec3.dot(a, a);
+
+      if(aa > rr) return false;
+
+      var h = Math.sqrt(rr - aa);
+      var inter = vec3.clone(point);
+      vec3.scale(inter, inter, -h);
+      vec3.add(inter, inter, a);
+
+      vec3.copy(point, inter);
+    }
+
+    return true;
   }
 
   function onMouseWheel(event) {
