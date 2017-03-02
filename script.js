@@ -16,8 +16,6 @@ var zfar = 1000000;
 var lodSplit = 1.5;
 var lodMerge = lodSplit * 1.1;
 
-var planetRadius = 1000;
-
 var patches = [];0
 var patchPool = [];
 
@@ -28,6 +26,8 @@ var Quad = class {
     this.x = x; // [0, 1] position within the root quad
     this.y = y;
     this.scale = scale;
+    this.rot = quat.create();
+    this.invRot = quat.create();
 
     this.isLeaf = true;
     this.children = [];
@@ -35,7 +35,26 @@ var Quad = class {
   }
 }
 
-var root = new Quad(0, 0, 2 * planetRadius);
+var Planet = class {
+  constructor(radius) {
+    this.radius = radius;
+    this.sides = [];
+
+    var unitz = vec3.fromValues(0, 0, 1);
+    for(var i = 0; i < 6; i++) {
+      var quad = new Quad(0, 0, 2 * radius);
+      var norm = vec3.create();
+      norm[(i + 2)% 3] = 1;
+      if(i >= 3)
+        vec3.scale(norm, norm, -1);
+      quat.rotationTo(quad.rot, unitz, norm);
+      quat.invert(quad.invRot, quad.rot);
+      this.sides.push(quad);
+    }
+  }
+}
+
+var planet = new Planet(1000);
 
 function start() {
   canvas = document.getElementById('canvas');
@@ -65,13 +84,13 @@ function start() {
   material = new Material(program);
   material.uniforms.push(projMatUniform);
 
-  controller = new Controller(cam, cam, planetRadius, canvas, document);
+  controller = new Controller(cam, cam, planet.radius, canvas, document);
   controller.useAbsoluteZ = true;
 
   resUniform = new Uniform("res", gl.INT, RES);
   material.uniforms.push(resUniform);
 
-  material.uniforms.push(new Uniform("radius", gl.FLOAT, planetRadius));
+  material.uniforms.push(new Uniform("radius", gl.FLOAT, planet.radius));
 
 
   redraw();
@@ -80,16 +99,25 @@ function start() {
 }
 
 var frustumMat = mat4.create();
+var qCamPos = vec3.create();
+var qCamRot = quat.create();
 function arrangePatches(camPos, camRot) {
   patches = [];
 
-  // Construct matrix for checking against frustum
-  mat4.fromRotationTranslationScale(
-      frustumMat, camRot, camPos, cam.scale);
-  mat4.invert(frustumMat, frustumMat);
-  mat4.mul(frustumMat, projMatUniform.array, frustumMat);
+  for(var i = 0; i < planet.sides.length; i++) {
+    var root = planet.sides[i];
+    
+    // Transform to quad's orientation'
+    vec3.transformQuat(qCamPos, camPos, root.invRot);
+    quat.mul(qCamRot, camRot, root.invRot);
 
-  recurseQuad(root, camPos, camRot);
+    // Construct matrix for checking against frustum
+    mat4.fromRotationTranslationScale(
+        frustumMat, qCamRot, qCamPos, cam.scale); // Cam scale doesn't get rotates properly
+    mat4.invert(frustumMat, frustumMat);
+    mat4.mul(frustumMat, projMatUniform.array, frustumMat);
+    recurseQuad(root, qCamPos, qCamRot);
+  }
 }
 
 var tempVecs = [];
@@ -103,11 +131,11 @@ function recurseQuad(quad, camPos, camRot) {
     for(var j = 0; j < 2; j++) {
       tempVecs[2*i+j][0] = quad.x + (i - .5) * quad.scale;
       tempVecs[2*i+j][1] = quad.y + (j - .5) * quad.scale;
-      tempVecs[2*i+j][2] = planetRadius;
+      tempVecs[2*i+j][2] = planet.radius;
       tempVecs[2*i+j][3] = 1; // w coordinate
 
       var length = vec3.length(tempVecs[2*i+j]);
-      vec3.scale(tempVecs[2*i+j], tempVecs[2*i+j], planetRadius / length);
+      vec3.scale(tempVecs[2*i+j], tempVecs[2*i+j], planet.radius / length); // TODO: Does it work for flat plane?
       vec4.transformMat4(tempVecs[2*i+j], tempVecs[2*i+j], frustumMat);
       vec4.scale(tempVecs[2*i+j], tempVecs[2*i+j], 1 / Math.abs(tempVecs[2*i+j][3]));
     }
@@ -161,21 +189,34 @@ function recurseQuad(quad, camPos, camRot) {
   if(!isInside) return;
 
   // Check distance
-  var dxa = quad.x  - .5 * quad.scale - camPos[0];
-  var dxb = quad.x  + .5 * quad.scale - camPos[0];
-  var dya = quad.y  - .5 * quad.scale - camPos[1];
-  var dyb = quad.y  + .5 * quad.scale - camPos[1];
-  
-  var dza = -quad.scale - camPos[2]; // TODO: Height is not constant
-  var dzb = +quad.scale - camPos[2];
-  var dx2 = Math.min(dxa * dxa, dxb * dxb);
-  var dy2 = Math.min(dya * dya, dyb * dyb);
-  var dz2 = Math.min(dza * dza, dzb * dzb);
+  if(planet.radius == 0) { // Flat plane
+    var dxa = quad.x  - .5 * quad.scale - camPos[0];
+    var dxb = quad.x  + .5 * quad.scale - camPos[0];
+    var dya = quad.y  - .5 * quad.scale - camPos[1];
+    var dyb = quad.y  + .5 * quad.scale - camPos[1];
+
+    var dza = -quad.scale - camPos[2]; // TODO: Height is not constant
+    var dzb = +quad.scale - camPos[2];
+    var dx2 = Math.min(dxa * dxa, dxb * dxb);
+    var dy2 = Math.min(dya * dya, dyb * dyb);
+    var dz2 = Math.min(dza * dza, dzb * dzb);
+
+    var dist = dx2 + dy2 + dz2;
+  }
+  else { // Sphere
+
+    // Project onto sphere
+    vec3.set(tempVecs[0], quad.x, quad.y, planet.radius);
+    var length = vec3.length(tempVecs[0]);
+    vec3.scale(tempVecs[0], tempVecs[0], planet.radius / length);
+
+    var dist = vec3.squaredDistance(tempVecs[0], camPos);
+  }
 
   if(quad.isLeaf) {
     
     // Do we split it
-    if(dx2 + dy2 + dz2 < quad.scale*quad.scale * lodSplit*lodSplit) {
+    if(dist < quad.scale*quad.scale * lodSplit*lodSplit) {
       // Split
       quad.isLeaf = false;
       quad.sceneNode = null;
@@ -192,7 +233,7 @@ function recurseQuad(quad, camPos, camRot) {
   else {
     
     // Do we merge
-    if(dx2 + dy2 + dz2 > quad.scale*quad.scale * lodMerge*lodMerge) {
+    if(dist > quad.scale*quad.scale * lodMerge*lodMerge) {
       // Merge
       quad.isLeaf = true;
       for(var i = 0; i < quad.children.length; i++)
@@ -203,8 +244,11 @@ function recurseQuad(quad, camPos, camRot) {
   }
 
   if(quad.isLeaf) {
-    if(!quad.sceneNode)
+    if(!quad.sceneNode) {
       quad.sceneNode = createPatch(material, quad.x, quad.y, quad.scale);
+      vec3.transformQuat(quad.sceneNode.position, quad.sceneNode.position, quad.rot);
+      quat.mul(quad.sceneNode.rotation, quad.sceneNode.rotation, quad.rot);
+    }
     patches.push(quad.sceneNode);
   }
   else {
