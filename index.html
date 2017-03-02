@@ -119,7 +119,8 @@
         vec2 coords = -.5 + texCoords;
 
         vec3 world = vec3(scale * coords + patchPos.xy, radius);
-        world = radius * normalize(normMat * world); // Rotate and project onto sphere
+        vec3 localUp = normalize(world);
+        world = radius * normMat * localUp; // Rotate and project onto sphere
 
         vec3 grad = vec3(0.);
         vec3 gradb = vec3(0.);
@@ -145,7 +146,7 @@
         z *= z2;
                   
 
-        vec3 normal = vec3(0., 0., 1.); // Normal of base surface (z)
+        vec3 normal = localUp; // Normal of base surface
         normal =  grad - dot(grad, normal) * normal + normal;
         normal = normalize(normal);
 
