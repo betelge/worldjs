@@ -68,9 +68,9 @@ function start() {
   var ext = gl.getExtension("EXT_color_buffer_float");
 
   cam = new Camera(40/180*3.141);
-  cam.position = vec3.fromValues(0, 25, 15)
+  cam.position = vec3.fromValues(0, 60, planet.radius + 15)
   var tempMat = mat4.create();
-  mat4.lookAt(tempMat, cam.position, vec3.fromValues(0,0,0), vec3.fromValues(0,0,1));
+  mat4.lookAt(tempMat, cam.position, vec3.fromValues(0,0,planet.radius), vec3.fromValues(0,0,1));
   mat4.getRotation(cam.rotation, tempMat);
   m = new Manager(gl, cam);
 
