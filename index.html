@@ -121,7 +121,8 @@
 
       out vec4 color;
 
-      vec4 snoise(vec3 v); // 3D Simplex noise with gradient
+      vec4 snoise(vec3 v, float scale); // 3D Simplex noise with gradient
+      vec4 snoise(vec3 v);
 
       void main() {
 
@@ -132,15 +133,10 @@
         vec3 up = normMat * normalize(world);
         world = radius * up; // Rotate and project onto sphere
 
-        vec4 z = 2.*snoise(.1*world);
+        vec4 z = 2.*snoise(world, .1);
         z.x += 2.;
-        vec4 zb = 4.*4.*snoise(.05*world);
-        vec4 z2 = 4.*snoise(.01*world);
-        z.yzw *= .1;
-        zb.yzw *= .05;
-        //grad += gradb;
-        //z += zb;
-        z2.yzw *= .01;
+        vec4 zb = 4.*4.*snoise(world, .05);
+        vec4 z2 = 4.*snoise(world, .01);
 
         float lim = 0.6;
         float sm = .2;
@@ -203,7 +199,9 @@
 
       // Gradiant added by betelge
 
-      vec4 snoise(vec3 v) { 
+      vec4 snoise(vec3 unscaledV, float scale) {
+        vec3 v = scale * unscaledV;
+
         const vec2  C = vec2(1.0/6.0, 1.0/3.0) ;
         const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);
 
@@ -282,7 +280,11 @@
         grad.x = dot(m3, -m1*px+8.*gr*xx);
         grad.y = dot(m3, -m1*py+8.*gr*yy);
         grad.z = dot(m3, -m1*pz+8.*gr*zz);
-        return 42.0 * vec4(dot( m*m, gr ), grad);
+        return 42.0 * vec4(dot( m*m, gr ), scale * grad);
+      }
+
+      vec4 snoise(vec3 v) {
+        return snoise(v, 1.);
       }
     </script>
   </head>
