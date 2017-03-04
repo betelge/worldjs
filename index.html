@@ -124,6 +124,11 @@
       vec4 snoise(vec3 v, float scale); // 3D Simplex noise with gradient
       vec4 snoise(vec3 v);
 
+      vec4 mul(vec4 a, vec4 b) {
+        return vec4( a.x + b.x,
+                    a.yzw * b.x + b.yzw * a.x + a.yzw * b.yzw);
+      }
+
       void main() {
 
         vec2 texCoords = (gl_FragCoord.xy - .5) / float(res - 1);
@@ -146,8 +151,7 @@
           z2.yzw *= s;
         }
 
-        z.yzw = z.yzw * z2.x + z2.yzw * z.x + z.yzw * z2.yzw;
-        z.x *= z2.x;
+        z = mul(z, z2);
 
         vec3 grad = z.yzw;
 
