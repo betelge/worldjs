@@ -95,7 +95,7 @@
         float lightDot = dot(worldPos, lightDir);
         float lightRad = smoothstep(-rad/1000., 0., length( worldPos - lightDot * lightDir ) - rad);
 
-        diffuse *= max(lightRad, step(0., lightDot));
+        diffuse *= max(lightRad, smoothstep(-rad/20., 0., lightDot));
         diffuse += .3;
         color = vec4(diffuse * col, 1.);
       }
@@ -124,9 +124,9 @@
       vec4 snoise(vec3 v, float scale); // 3D Simplex noise with gradient
       vec4 snoise(vec3 v);
 
-      vec4 mul(vec4 a, vec4 b) {
-        return vec4( a.x + b.x,
-                    a.yzw * b.x + b.yzw * a.x + a.yzw * b.yzw);
+      vec4 mul(vec4 f, vec4 g) {
+        return vec4( f.x * g.x,
+                    f.yzw * g.x + g.yzw * f.x + f.yzw * g.yzw);
       }
 
       const mat3 m3 = mat3( .8, -.6, 0.,
@@ -171,8 +171,10 @@
           z2.x = sm*lim + s*(1.-sm)*lim;
           z2.yzw *= s;
         }
-
-        z = mul(z, z2);
+        
+        vec4 pz = mul(z, z2);
+        z = 10. * snoise(world, .001);
+        z = mul(z, z) + 250. * fbm(world, .001) + pz;
         //z = mul(z, fbm(world, 1./8.));
 
         vec3 grad = z.yzw;
