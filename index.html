@@ -29,6 +29,7 @@
       out vec3 modelPos;
       out vec3 worldPos;
       out vec3 normal;
+      out float rad;
       out float debugScale;
       out vec4 debug;
 
@@ -58,6 +59,7 @@
         vec4 norm4 = vec4(normalize(heightNormal.yzw), 1.);
         //norm4 = normMat * norm4; // TODO: This is ignored for the planet but needed for everything else!
         normal = norm4.xyz / norm4.w;
+        rad = radius;
 
         modelPos = vec3(coords, radius / scale);
         vec4 worldPos4 = mMat * vec4(modelPos, 1.);
@@ -74,6 +76,7 @@
       in vec3 modelPos;
       in vec3 worldPos;
       in vec3 normal;
+      in float rad;
       in float debugScale;
       in vec4 debug;
 
@@ -82,14 +85,19 @@
       void main() {
         vec3 n = normalize(normal);
         vec3 lightDir = vec3(0., .707, .707);
-        float diffuse = 0.3 + .7* max(0.0, dot(n, lightDir));
+        float diffuse = .7* max(0.0, dot(n, lightDir));
 
         float r = abs(1. - debugScale);
         float g = fract(debugScale);
         float b = fract((r - g) * 100.) + fract(0.1 * debugScale) + fract(0.01 * debugScale);
         vec3 col = vec3(.8, .8, .1); //clamp(vec3(r, g, b), 0., 1.);
 
-        color = vec4(diffuse * col/*debug.rgb*/, 1.);
+        float lightDot = dot(worldPos, lightDir);
+        float lightRad = smoothstep(-rad/1000., 0., length( worldPos - lightDot * lightDir ) - rad);
+
+        diffuse *= max(lightRad, step(0., lightDot));
+        diffuse += .3;
+        color = vec4(diffuse * col, 1.);
       }
     </script>
     <script type="text/glsl" id="rtt_vertex_shader">#version 300 es
