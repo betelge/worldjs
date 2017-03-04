@@ -129,6 +129,27 @@
                     a.yzw * b.x + b.yzw * a.x + a.yzw * b.yzw);
       }
 
+      const mat3 m3 = mat3( .8, -.6, 0.,
+                            .6, .8, 0.,
+                            0., 0., 1.);
+      vec4 fbm(vec3 v, float scale) {
+          vec4 z = vec4(0.);
+
+          z += 0.5000 * snoise(v, scale);
+          v = m3 * v;
+          z += 0.2500 * snoise(v, scale * 2.02);
+          v = m3 * v;
+          z += 0.1250 * snoise(v, scale * 4.05);
+          v = m3 * v;
+          z += 0.0625 * snoise(v, scale * 8.14);
+
+          return 1.0667*z;
+      }
+
+      vec4 fbm(vec3 v) {
+        return fbm(v, 1.);
+      }
+
       void main() {
 
         vec2 texCoords = (gl_FragCoord.xy - .5) / float(res - 1);
@@ -152,6 +173,7 @@
         }
 
         z = mul(z, z2);
+        //z = mul(z, fbm(world, 1./8.));
 
         vec3 grad = z.yzw;
 
