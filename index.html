@@ -173,8 +173,8 @@
         }
         
         vec4 pz = mul(z, z2);
-        z = 10. * snoise(world, .001);
-        z = mul(z, z) + 250. * fbm(world, .001) + pz;
+        z = 2. * snoise(world, .001);
+        z = z + 25. * fbm(world, .001) + pz;
         //z = mul(z, fbm(world, 1./8.));
 
         vec3 grad = z.yzw;

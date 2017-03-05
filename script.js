@@ -109,7 +109,7 @@ function arrangePatches(camPos, camRot) {
     
     // Transform to quad's orientation'
     vec3.transformQuat(qCamPos, camPos, root.invRot);
-    quat.mul(qCamRot, camRot, root.invRot);
+    quat.mul(qCamRot, root.invRot, camRot);
 
     // Construct matrix for checking against frustum
     mat4.fromRotationTranslationScale(
@@ -126,6 +126,8 @@ for(var i = 0; i < 4; i++)
 
 function recurseQuad(quad, camPos, camRot) {
 
+  var isFacingCamera = false;
+
   // Ignore if outside frustum
   for(var i = 0; i < 2; i++)
     for(var j = 0; j < 2; j++) {
@@ -138,10 +140,17 @@ function recurseQuad(quad, camPos, camRot) {
         var length = vec3.length(tempVecs[2*i+j]);
         vec3.scale(tempVecs[2*i+j], tempVecs[2*i+j], planet.radius / length);
       }
+
+      if(vec3.dot(tempVecs[2*i+j], camPos) > 0)
+        isFacingCamera = true;
+
       vec4.transformMat4(tempVecs[2*i+j], tempVecs[2*i+j], frustumMat);
       vec4.scale(tempVecs[2*i+j], tempVecs[2*i+j], 1 / Math.abs(tempVecs[2*i+j][3]));
     }
-  
+
+  if(!isFacingCamera)
+    return;
+
   var isInside = false;
   for(var i = 0; i < 4; i++) {
     isInside = isInside
@@ -188,7 +197,8 @@ function recurseQuad(quad, camPos, camRot) {
     }
     if(outside) isInside = false;
   }
-  //if(!isInside) return;
+  if(!isInside) return;
+
 
   // Check distance
   if(planet.radius == 0) { // Flat plane
