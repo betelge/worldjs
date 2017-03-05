@@ -249,11 +249,11 @@ var Controller = function(object, cam, radius, canvas, document) {
 
     var camh = vec3.length(cam.position);
     var margin = .1;
-    if(camh < radius + margin) {
-      vec3.scale(cam.position, cam.position, radius / camh + margin);
-    }
+    /*if(camh < radius + margin) {
+      vec3.scale(cam.position, cam.position, (radius + margin) / camh);
+    }*/
 
-    vec3.scale(look, look, zoomSpeed * (camh - radius));
+    vec3.scale(look, look, zoomSpeed * Math.max(5, camh - radius));
 
     vec3.add(cam.position, cam.position, look);
   }
