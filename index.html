@@ -150,6 +150,8 @@
         return fbm(v, 1.);
       }
 
+      vec4 terrain(vec3 world);
+
       void main() {
 
         vec2 texCoords = (gl_FragCoord.xy - .5) / float(res - 1);
@@ -158,6 +160,21 @@
         vec3 world = vec3(scale * coords + patchPos.xy, radius);
         vec3 up = normMat * normalize(world);
         world = radius * up; // Rotate and project onto sphere
+
+        // Apply custom terrain
+        vec4 z = terrain(world);
+
+        vec3 grad = z.yzw;
+
+        vec3 normal = up; // Normal of base surface
+        normal =  grad - dot(grad, normal) * normal + up;
+        normal = normalize(normal);
+
+        color = vec4(z.x, normal);
+      }
+    </script>
+    <script type="text/glsl" id="terrain_shader">
+      vec4 terrain(vec3 world) {
 
         vec4 z = 2.*snoise(world, .1);
         z.x += 2.;
@@ -177,13 +194,7 @@
         z = z + 25. * fbm(world, .001) + pz;
         //z = mul(z, fbm(world, 1./8.));
 
-        vec3 grad = z.yzw;
-
-        vec3 normal = up; // Normal of base surface
-        normal =  grad - dot(grad, normal) * normal + up;
-        normal = normalize(normal);
-
-        color = vec4(z.x, normal);
+        return z;
       }
     </script>
     <script type="text/glsl" id="simplex2d_shader">

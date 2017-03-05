@@ -295,6 +295,7 @@ function doProc(texture, x, y, scale, normMat) {
   if(rttProgram === -1) {
     rttProgram = loadShader(document.getElementById("rtt_vertex_shader"),
         [document.getElementById("rtt_fragment_shader"),
+        document.getElementById("terrain_shader"),
         document.getElementById("simplex3d_shader")]);
 
     rttResLocation = gl.getUniformLocation(rttProgram, "res");
