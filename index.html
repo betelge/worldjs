@@ -176,10 +176,14 @@
     <script type="text/glsl" id="terrain_shader">
       vec4 terrain(vec3 world) {
 
-        vec4 z = 2.*snoise(world, .1);
+        vec4 dummy = vec4(0., 0., 0., 0.);
+
+        vec4 z = 2.*fbm(world, .1); // Mountains
         z.x += 2.;
-        vec4 zb = 4.*4.*snoise(world, .05);
-        vec4 z2 = 4.*snoise(world, .01);
+        vec4 zb = 4.*4.*snoise(world, .05); // Bigger mountains
+        vec4 z2 = 4.*snoise(world, .01); // Small continents
+        vec4 z3 = 3. * fbm(-world, 1./1000.); // Big continents
+        z2 = .5*z2 + z3;
 
         float lim = 0.6;
         float sm = .2;
@@ -188,10 +192,12 @@
           z2.x = sm*lim + s*(1.-sm)*lim;
           z2.yzw *= s;
         }
+
+        vec4 widebumps = 25. * fbm(world, .001);
         
         vec4 pz = mul(z, z2);
         z = 2. * snoise(world, .001);
-        z = z + 25. * fbm(world, .001) + pz;
+        z = z + widebumps + pz;
         //z = mul(z, fbm(world, 1./8.));
 
         return z;

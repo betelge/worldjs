@@ -197,7 +197,7 @@ function recurseQuad(quad, camPos, camRot) {
     }
     if(outside) isInside = false;
   }
-  if(!isInside) return;
+  //if(!isInside) return; // TODO: Fix frustum culling
 
 
   // Check distance
